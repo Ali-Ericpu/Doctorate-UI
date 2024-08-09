@@ -9,7 +9,7 @@ import java.io.FileReader
 
 data class AppConfig(
     val adbHost: String = "localhost",
-    val adbPort: Int = 5555,
+    val adbPort: Int = 7555,
 )
 
 typealias OnConfigChange = (AppConfig) -> Unit

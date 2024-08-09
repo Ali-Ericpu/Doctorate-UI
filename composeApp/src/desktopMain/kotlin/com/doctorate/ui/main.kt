@@ -16,11 +16,12 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import com.doctorate.ui.config.AppConfig
+import com.doctorate.ui.page.RoutePage
 import com.doctorate.ui.view.Toast
+import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatAtomOneLightIJTheme
 import doctorateui.composeapp.generated.resources.Res
 import doctorateui.composeapp.generated.resources.icon
 import org.jetbrains.compose.resources.painterResource
-import page.RoutePage
 
 fun main() = application {
     AppWindow()
@@ -29,6 +30,7 @@ fun main() = application {
 @Composable
 @Preview
 fun ApplicationScope.AppWindow() {
+    FlatAtomOneLightIJTheme.setup()
     var localConfig by remember { mutableStateOf(AppConfig()) }
     Window(
         onCloseRequest = ::exitApplication,
@@ -47,7 +49,7 @@ fun ApplicationScope.AppWindow() {
                 }
             ) {
                 MaterialTheme {
-                    RoutePage(localConfig)
+                    RoutePage()
                 }
             }
         }

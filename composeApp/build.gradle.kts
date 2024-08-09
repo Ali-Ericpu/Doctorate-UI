@@ -8,10 +8,10 @@ plugins {
 
 kotlin {
     jvm("desktop")
-    
+
     sourceSets {
         val desktopMain by getting
-        
+
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -21,6 +21,10 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation("org.jetbrains.androidx.navigation:navigation-compose:2.7.0-alpha07")
+            implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.5.1")
+            implementation("com.formdev:flatlaf:3.5.1")
+            implementation("com.formdev:flatlaf-intellij-themes:3.5.1")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
