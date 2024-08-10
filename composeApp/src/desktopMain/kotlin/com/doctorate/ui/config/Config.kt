@@ -8,8 +8,10 @@ import java.io.File
 import java.io.FileReader
 
 data class AppConfig(
-    val adbHost: String = "localhost",
-    val adbPort: Int = 7555,
+    val adbUri: String = "127.0.0.1:7555",
+    var appPackageName: String = "",
+    var emulatorPath: String = "",
+    val scriptPath: String = "script/hook.js",
 )
 
 typealias OnConfigChange = (AppConfig) -> Unit

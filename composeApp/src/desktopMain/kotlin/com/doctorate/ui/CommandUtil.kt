@@ -21,13 +21,13 @@ object CommandUtil {
         return readLine
     }
 
-    suspend fun cmdAsyncTask(vararg command: String, list: MutableList<String>) = withContext(Dispatchers.IO) {
+    suspend fun cmdAsyncTask(vararg command: String, onCommandUpdate: (String) -> Unit) = withContext(Dispatchers.IO) {
         val process = ProcessBuilder().command(*command).start()
         process.inputReader().use {
             try {
                 while (true) {
                     val line = it.readLine() ?: break
-                    list.add(line)
+                    onCommandUpdate(line)
                 }
             } catch (_: Exception) {
             }
