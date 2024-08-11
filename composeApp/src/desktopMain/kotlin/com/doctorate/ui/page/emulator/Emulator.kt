@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,9 +37,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogState
 import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.WindowPosition
-import com.doctorate.ui.CommandUtil
 import com.doctorate.ui.config.AppConfig
 import com.doctorate.ui.config.LocalAppConfig
+import com.doctorate.ui.config.readConfig
+import com.doctorate.ui.util.CommandUtil
 import com.doctorate.ui.view.FileDialog
 import com.doctorate.ui.view.LocalAppToaster
 import com.doctorate.ui.view.Toaster
@@ -61,33 +63,36 @@ import java.io.IOException
 @Preview
 fun Emulator() {
     val config = LocalAppConfig.current.config
+    val onConfigChange = LocalAppConfig.current.onConfigChange
     var showCommand by rememberSaveable { mutableStateOf(false) }
-    var adbOutputString = rememberSaveable { mutableStateListOf<String>() }
+    var commandOutput = rememberSaveable { mutableStateListOf<String>() }
     var adbUri by rememberSaveable { mutableStateOf(config.adbUri) }
     MaterialTheme {
         Column(Modifier.fillMaxWidth()) {
-            ChangeAdbUri(
-                adbHost = adbUri,
-                onHostChange = { adbUri = it }
-            )
             ConnectEmulatorButton(
                 adbUri = adbUri,
-                onCommandUpdate = { adbOutputString.add(it) },
+                adbToolPath = config.adbToolPath,
+                serverPort = config.serverPort,
+                onCommandUpdate = { commandOutput.add(it) },
+                onAdbUriChange = { adbUri = it },
+                onAdbUriSave = { onConfigChange(it) },
                 onConnect = { showCommand = it }
             )
             CustomButtons(
                 config = config,
-                onCommandUpdate = { adbOutputString.add(it) }
+                onCommandUpdate = { commandOutput.add(it) },
+                onConfigChange = onConfigChange
             )
             AnimatedVisibility(showCommand) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
+                        .padding(8.dp)
                         .clip(shape = RoundedCornerShape(10.dp))
                         .background(color = Color.Black)
                         .padding(8.dp),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    items(adbOutputString) { output -> Text(text = output, color = Color.White) }
+                    items(commandOutput) { output -> Text(text = output, color = Color.White) }
                 }
             }
         }
@@ -97,99 +102,112 @@ fun Emulator() {
 @Composable
 fun ConnectEmulatorButton(
     adbUri: String,
+    adbToolPath: String,
+    serverPort: Int,
+    onAdbUriChange: (String) -> Unit,
+    onAdbUriSave: (AppConfig) -> Unit,
     onCommandUpdate: (String) -> Unit,
     onConnect: (Boolean) -> Unit
 ) {
     val toast = LocalAppToaster.current
-    Button(onClick = {
-        val regex =
-            Regex("^((\\d|[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5])\\.){3}(\\d|[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5]):(?:[0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\$")
-        CoroutineScope(Dispatchers.IO).launch {
-            if (!regex.matches(adbUri)) {
-                toast.toastFailure("Illegal adb uri")
-                throw RuntimeException("Illegal adb uri")
-            }
-            onConnect(true)
-            try {
-                CommandUtil.cmdTask("adb", "devices")
-                CommandUtil.cmdTask("adb", "connect", adbUri)?.also {
-                    if (it.startsWith("cannot")) {
-                        toast.toastFailure("Connecting failed, Please check emulator state!")
-                        onCommandUpdate("Connecting failed, Please check emulator state!")
-                        throw RuntimeException("Connecting failed")
-                    }
-                    onCommandUpdate(it)
-                }
-                CommandUtil.cmdTask("adb", "start-server")
-                CommandUtil.cmdTask("adb", "wait-for-server")
-                CommandUtil.cmdTask("adb", "reverse", "tcp:8443", "tcp:8443")
-                CommandUtil.cmdTask("adb", "root")
-                onCommandUpdate("running frida-server")
-                CommandUtil.cmdAsyncTask(
-                    "adb",
-                    "shell",
-                    "/data/local/tmp/frida-server",
-                    "&",
-                    onCommandUpdate = onCommandUpdate
-                )
-            } catch (_: IOException) {
-                onCommandUpdate("Connect error please check root permission")
-                toast.toastFailure("Connect error please check root permission")
-            }
-            try {
-                val version = CommandUtil.cmdTask("python", "--version")
-                onCommandUpdate("Python Version : $version")
-            } catch (_: IOException) {
-                onCommandUpdate("Can't find Python")
-                toast.toastFailure("Can't find Python")
-            }
-            try {
-                val version = CommandUtil.cmdTask("frida", "--v")
-                onCommandUpdate("Frida Version : $version")
-            } catch (_: IOException) {
-                onCommandUpdate("Can't find Frida")
-                toast.toastFailure("Can't find Frida")
-            }
-
-        }
-
-    }, modifier = Modifier.fillMaxWidth()) {
-        Text("保存并连接")
-    }
-}
-
-@Composable
-fun ChangeAdbUri(
-    adbHost: String,
-    onHostChange: (String) -> Unit
-) {
-    Spacer(modifier = Modifier.height(16.dp))
-    OutlinedTextField(
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-        value = (adbHost),
-        onValueChange = { onHostChange(it) },
-        colors = TextFieldDefaults.outlinedTextFieldColors(
-            backgroundColor = MaterialTheme.colors.surface,
-            unfocusedBorderColor = MaterialTheme.colors.onSurface,
-            focusedBorderColor = MaterialTheme.colors.onSurface,
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.LightGray)
+            .padding(8.dp)
+            .height(56.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        OutlinedTextField(
+            leadingIcon = {
+                Text(text = "ADB Uri : ", color = Color.Black, modifier = Modifier.padding(start = 8.dp))
+            },
+            singleLine = true,
+            value = adbUri,
+            onValueChange = { onAdbUriChange(it) },
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                backgroundColor = MaterialTheme.colors.surface,
+                unfocusedBorderColor = MaterialTheme.colors.onSurface,
+                focusedBorderColor = MaterialTheme.colors.onSurface,
+            ),
+            modifier = Modifier.width(460.dp)
         )
-    )
+        val modifier = Modifier.fillMaxHeight().width(100.dp)
+        Button(
+            modifier = modifier,
+            onClick = {
+                val regex =
+                    Regex("^((\\d|[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5])\\.){3}(\\d|[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5]):(?:[0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\$")
+                CoroutineScope(Dispatchers.IO).launch {
+                    if (!regex.matches(adbUri)) {
+                        toast.toastFailure("Illegal adb uri")
+                        throw RuntimeException("Illegal adb uri")
+                    }
+                    onAdbUriSave(readConfig().copy(adbUri = adbUri))
+                }
+            }) {
+            Text("Save")
+        }
+        Button(
+            modifier = modifier,
+            onClick = {
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        onConnect(true)
+                        CommandUtil.cmdTask(adbToolPath, "devices")
+                        CommandUtil.cmdTask(adbToolPath, "connect", adbUri)?.also {
+                            if (it.startsWith("cannot")) {
+                                throw RuntimeException("Connecting failed, Please check emulator state!")
+                            }
+                            onCommandUpdate(it)
+                        }
+                        CommandUtil.cmdTask(adbToolPath, "start-server")
+                        CommandUtil.cmdTask(adbToolPath, "wait-for-server")
+                        CommandUtil.cmdTask(adbToolPath, "reverse", "tcp:$serverPort", "tcp:$serverPort")
+                        CommandUtil.cmdTask(adbToolPath, "root")
+                        onCommandUpdate("Python Version : ${CommandUtil.cmdTask("python", "--version")}")
+                        onCommandUpdate("Frida Version : ${CommandUtil.cmdTask("frida", "--v")}")
+                        try {
+                            CommandUtil.cmdAsyncTask(
+                                adbToolPath,
+                                "shell",
+                                "/data/local/tmp/frida-server",
+                                "&",
+                                onCommandUpdate = onCommandUpdate
+                            )
+                            onCommandUpdate("running frida-server")
+                        } catch (_: IOException) {
+                            throw RuntimeException("Frida server on emulator not exists")
+                        }
+                    } catch (e: Exception) {
+                        onCommandUpdate(e.message.toString())
+                        e.message?.let { toast.toastFailure(it) }
+                    }
+                }
+
+            }) {
+            Text("Connect Emulator")
+        }
+    }
 }
 
 @Composable
 fun CustomButtons(
     config: AppConfig,
-    onCommandUpdate: (String) -> Unit
+    onCommandUpdate: (String) -> Unit,
+    onConfigChange: (AppConfig) -> Unit,
 ) {
     val toast = LocalAppToaster.current
-    var showEmulatorDialog by rememberSaveable { mutableStateOf(false) }
-    var showScriptDialog by rememberSaveable { mutableStateOf(false) }
-    var showPackageDialog by rememberSaveable { mutableStateOf(false) }
+    var showEmulatorDialog by remember { mutableStateOf(false) }
+    var showScriptDialog by remember { mutableStateOf(false) }
+    var showPackageDialog by remember { mutableStateOf(false) }
+    var showCustomDialog by remember { mutableStateOf(false) }
     var appPackage by rememberSaveable { mutableStateOf(config.appPackageName) }
+    var scriptState by rememberSaveable { mutableStateOf(File(config.scriptPath).exists()) }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(8.dp).height(56.dp).padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        modifier = Modifier.fillMaxWidth().padding(8.dp).height(56.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Button(
@@ -199,17 +217,15 @@ fun CustomButtons(
             if (showEmulatorDialog) {
                 if (config.emulatorPath.isNotEmpty()) {
                     showEmulatorDialog = false
-                    CommandUtil.cmdTask(config.emulatorPath)
+                    launchEmulator(config.emulatorPath, onCommandUpdate)
                 } else {
                     FileDialog(
                         onCloseRequest = {
                             showEmulatorDialog = false
                             it?.also {
                                 if (it.endsWith(".exe")) {
-                                    config.emulatorPath = it
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        CommandUtil.cmdAsyncTask(it, onCommandUpdate = onCommandUpdate)
-                                    }
+                                    onConfigChange(config.copy(emulatorPath = it))
+                                    launchEmulator(it, onCommandUpdate)
                                 } else {
                                     onCommandUpdate("Error file,Please try again")
                                 }
@@ -220,14 +236,15 @@ fun CustomButtons(
             }
         }
         Button(onClick = { showScriptDialog = true }, modifier = Modifier.size(100.dp)) {
-            Text(text = "Load Script", modifier = Modifier.align(Alignment.CenterVertically))
+            Text(text = "Select Script", modifier = Modifier.align(Alignment.CenterVertically))
             if (showScriptDialog) {
                 FileDialog(
                     onCloseRequest = {
                         showScriptDialog = false
                         it?.also {
                             if (it.endsWith(".js")) {
-                                File(it).copyTo(File(config.scriptPath), true)
+                                scriptState = true
+                                File(it).copyTo(File(config.scriptPath), true).also { onConfigChange(config) }
                             } else {
                                 onCommandUpdate("Error file,Please try again")
                             }
@@ -238,7 +255,7 @@ fun CustomButtons(
         }
         Button(
             onClick = { showPackageDialog = true },
-//            enabled = File(config.scriptPath).exists(),
+            enabled = scriptState,
             modifier = Modifier.size(100.dp)
         ) {
             Text("Launch Game")
@@ -277,8 +294,10 @@ fun CustomButtons(
                             Button(
                                 onClick = {
                                     if (appPackage.isNotEmpty()) {
-                                        config.appPackageName = appPackage
                                         showPackageDialog = false
+                                        onConfigChange(
+                                            config.copy(appPackageName = appPackage)
+                                                .also { launchGame(it, toast, onCommandUpdate) })
                                     }
                                 },
                                 modifier = Modifier.fillMaxHeight()
@@ -290,8 +309,33 @@ fun CustomButtons(
                 }
             }
         }
+        Button(
+            onClick = { showCustomDialog = true },
+            modifier = Modifier.size(100.dp)
+        ) {
+            Text("Custom")
+            if (showCustomDialog) {
+                if (config.customPath.isNotEmpty()) {
+                    showCustomDialog = false
+                    launchEmulator(config.customPath) { }
+                } else {
+                    FileDialog(
+                        onCloseRequest = {
+                            showCustomDialog = false
+                            println(it)
+                            it?.also { config.customPath = it.also { onConfigChange(config) } }
+                        }
+                    )
+                }
+            }
+        }
     }
 }
+
+fun launchEmulator(emulatorPath: String, onCommandUpdate: (String) -> Unit) =
+    CoroutineScope(Dispatchers.IO).launch {
+        CommandUtil.cmdAsyncTask(emulatorPath, onCommandUpdate = onCommandUpdate)
+    }
 
 fun launchGame(config: AppConfig, toast: Toaster, onCommandUpdate: (String) -> Unit) =
     CoroutineScope(Dispatchers.IO).launch {

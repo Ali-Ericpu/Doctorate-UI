@@ -19,8 +19,9 @@ import com.doctorate.ui.config.AppConfig
 import com.doctorate.ui.config.readConfig
 import com.doctorate.ui.page.RoutePage
 import com.doctorate.ui.view.Toast
+import com.formdev.flatlaf.FlatLightLaf
 import doctorateui.composeapp.generated.resources.Res
-import doctorateui.composeapp.generated.resources.icon
+import doctorateui.composeapp.generated.resources.compose_multiplatform
 import org.jetbrains.compose.resources.painterResource
 
 fun main() = application {
@@ -30,14 +31,15 @@ fun main() = application {
 @Composable
 @Preview
 fun ApplicationScope.AppWindow() {
+    FlatLightLaf.setup()
     var localConfig by remember { mutableStateOf(readConfig()) }
     Window(
         onCloseRequest = ::exitApplication,
-        icon = painterResource(Res.drawable.icon),
+        icon = painterResource(Res.drawable.compose_multiplatform),
         title = "DoctorateUI",
         resizable = false,
         state = WindowState(
-            size = DpSize(1280.dp, 800.dp),
+            size = DpSize(1024.dp, 680.dp),
             position = WindowPosition(Alignment.Center)
         )
     ) {

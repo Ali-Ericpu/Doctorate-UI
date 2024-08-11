@@ -59,7 +59,7 @@ fun FileDialog(
                 override fun setVisible(value: Boolean) {
                     super.setVisible(value)
                     if (value) {
-                        onCloseRequest(directory + file)
+                        onCloseRequest(directory?.plus(file))
                     }
                 }
             }.apply {

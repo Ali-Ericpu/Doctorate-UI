@@ -1,24 +1,25 @@
 package com.doctorate.ui.config
 
 import androidx.compose.runtime.*
+import com.doctorate.ui.util.JsonUtil
 import com.doctorate.ui.view.LocalAppToaster
-import com.google.gson.GsonBuilder
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.FileReader
 
 data class AppConfig(
     val adbUri: String = "127.0.0.1:7555",
+    val serverPort: Int = 8443,
     var appPackageName: String = "",
     var emulatorPath: String = "",
+    var customPath: String = "",
     val scriptPath: String = "script/hook.js",
+    val adbToolPath: String = "adb/adb.exe",
 )
 
 typealias OnConfigChange = (AppConfig) -> Unit
 
 class AppConfigContext(val config: AppConfig = AppConfig(), val onConfigChange: OnConfigChange)
 
-val gson = GsonBuilder().setPrettyPrinting().serializeNulls().create()
 val LocalAppConfig = compositionLocalOf { AppConfigContext { } }
 
 @Composable
@@ -46,18 +47,17 @@ fun AppConfig(onConfigChange: OnConfigChange? = null, App: @Composable () -> Uni
 }
 
 fun readConfig(): AppConfig {
-    return try {
-        val configFile = File("config.json")
-        gson.fromJson(FileReader(configFile), AppConfig::class.java)
-    } catch (_: Exception) {
-        AppConfig()
+    val configFile = File("config/uiConfig.json")
+    return if (configFile.exists()) {
+        JsonUtil.fromJson(configFile, AppConfig::class.java)
+    } else {
+        AppConfig().also { JsonUtil.writeJson(it, configFile) }
     }
 }
 
 fun writeConfig(newConfig: AppConfig, onSuccess: () -> Unit, onFailure: (String) -> Unit) {
     try {
-        val configFile = File("config.json")
-        configFile.outputStream().write(gson.toJson(newConfig).toByteArray())
+        JsonUtil.writeJson(newConfig, File("config/uiConfig.json"))
         onSuccess()
     } catch (e: Exception) {
         e.printStackTrace()

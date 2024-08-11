@@ -23,6 +23,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation("org.jetbrains.androidx.navigation:navigation-compose:2.7.0-alpha07")
             implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.5.1")
+            implementation("com.formdev:flatlaf:3.5.1")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -39,7 +40,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Exe, TargetFormat.Deb)
-            packageName = "com.doctorate.ui"
+            packageName = "Doctorate UI"
             packageVersion = "1.0.0"
         }
     }

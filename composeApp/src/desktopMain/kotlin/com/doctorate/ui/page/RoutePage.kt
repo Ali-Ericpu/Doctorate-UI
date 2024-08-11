@@ -24,9 +24,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.doctorate.ui.App
 import com.doctorate.ui.page.emulator.Emulator
+import com.doctorate.ui.page.setting.Setting
 
 enum class Page(val route: String, val desc: String) {
-    Emulator("emulator", "模拟器"), Frida("frida", "脚本"), Setting("setting", "设置");
+    Emulator("emulator", "模拟器"), Nothing("frida", "脚本"), Setting("setting", "设置");
 
     companion object {
         fun getRoute(route: String?): Page {
@@ -82,10 +83,10 @@ fun RoutePage() {
                         Emulator()
                     }
                     composable(route = Page.Setting.name) {
-                        App()
+                        Setting()
                     }
-                    composable(route = Page.Frida.name) {
-                        Text(text = "frida")
+                    composable(route = Page.Nothing.name) {
+                        App()
                     }
                 }
             }
@@ -121,7 +122,7 @@ fun TabNavigationRail(
                     .clip(RoundedCornerShape(8.dp))
                     .height(50.dp)
                     .background(if (it == currentPage) Color(42, 199, 219) else Color(245, 245, 245)),
-                icon = { Text(text = it.desc, color = Color.Black) },
+                icon = { Text(text = it.name, color = Color.Black) },
                 selected = it == currentPage,
                 onClick = { onTabSelect(it) },
                 selectedContentColor = Color.Cyan,

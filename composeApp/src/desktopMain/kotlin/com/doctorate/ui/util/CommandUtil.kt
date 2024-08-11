@@ -1,4 +1,4 @@
-package com.doctorate.ui
+package com.doctorate.ui.util
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,6 +22,7 @@ object CommandUtil {
     }
 
     suspend fun cmdAsyncTask(vararg command: String, onCommandUpdate: (String) -> Unit) = withContext(Dispatchers.IO) {
+        onCommandUpdate(command.joinToString(" "))
         val process = ProcessBuilder().command(*command).start()
         process.inputReader().use {
             try {
@@ -29,7 +30,8 @@ object CommandUtil {
                     val line = it.readLine() ?: break
                     onCommandUpdate(line)
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                onCommandUpdate(e.message.toString())
             }
         }
     }
