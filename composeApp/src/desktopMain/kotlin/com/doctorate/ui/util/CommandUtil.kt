@@ -22,7 +22,6 @@ object CommandUtil {
     }
 
     suspend fun cmdAsyncTask(vararg command: String, onCommandUpdate: (String) -> Unit) = withContext(Dispatchers.IO) {
-        onCommandUpdate(command.joinToString(" "))
         val process = ProcessBuilder().command(*command).start()
         process.inputReader().use {
             try {

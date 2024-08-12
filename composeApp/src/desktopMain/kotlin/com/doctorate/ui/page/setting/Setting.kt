@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -56,6 +57,11 @@ fun Setting() {
             leading = "App Package Name :",
             onValueSave = { onConfigChange(config.copy(appPackageName = it)) }
         )
+        EditSwitch(
+            value = "Dark Mode",
+            state = config.darkMode,
+            onCheckedChange = { onConfigChange(config.copy(darkMode = it)) }
+        )
     }
 }
 
@@ -80,7 +86,7 @@ fun EditPathColumn(
             readOnly = true,
             value = value,
             onValueChange = {},
-            label = { Text(label) },
+            label = { Text(text = label, color = Color.Black) },
             colors = TextFieldDefaults.outlinedTextFieldColors(
                 textColor = Color.Black,
                 backgroundColor = Color.LightGray,
@@ -143,10 +149,10 @@ fun EditValueRow(
             singleLine = true,
             value = value,
             onValueChange = { value = it },
-            leadingIcon = { Text(text = leading, modifier = Modifier.padding(start = 8.dp)) },
+            leadingIcon = { Text(text = leading, color = Color.Black, modifier = Modifier.padding(start = 8.dp)) },
             colors = TextFieldDefaults.outlinedTextFieldColors(
                 textColor = Color.Black,
-                backgroundColor = Color.White,
+                backgroundColor = Color.LightGray,
                 unfocusedBorderColor = MaterialTheme.colors.onSurface,
                 focusedBorderColor = Color.Black,
             ),
@@ -163,4 +169,30 @@ fun EditValueRow(
         }
     }
 
+}
+
+@Composable
+fun EditSwitch(
+    value: String,
+    state: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    var state by remember { mutableStateOf(state) }
+    Row(
+        modifier = Modifier
+            .padding(8.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(color = Color.LightGray)
+            .padding(8.dp)
+            .height(40.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = value, color = Color.Black, modifier = Modifier.padding(8.dp).fillMaxHeight())
+        Switch(
+            checked = state,
+            onCheckedChange = { onCheckedChange(it.also { state = it }) }
+        )
+    }
 }

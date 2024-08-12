@@ -9,11 +9,12 @@ import java.io.File
 data class AppConfig(
     val adbUri: String = "127.0.0.1:7555",
     val serverPort: Int = 8443,
-    var appPackageName: String = "",
-    var emulatorPath: String = "",
-    var customPath: String = "",
+    val appPackageName: String = "",
+    val emulatorPath: String = "",
+    val customPath: String = "",
     val scriptPath: String = "script/hook.js",
     val adbToolPath: String = "adb/adb.exe",
+    val darkMode: Boolean = false,
 )
 
 typealias OnConfigChange = (AppConfig) -> Unit

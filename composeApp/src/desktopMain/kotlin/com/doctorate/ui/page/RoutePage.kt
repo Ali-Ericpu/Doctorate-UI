@@ -25,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import com.doctorate.ui.App
 import com.doctorate.ui.page.emulator.Emulator
 import com.doctorate.ui.page.setting.Setting
+import com.doctorate.ui.theme.lightTheme
 
 enum class Page(val route: String, val desc: String) {
     Emulator("emulator", "模拟器"), Nothing("frida", "脚本"), Setting("setting", "设置");
@@ -112,7 +113,7 @@ fun TabNavigationRail(
     modifier: Modifier
 ) {
     NavigationRail(
-        modifier = modifier.background(Color(245, 245, 245))
+        modifier = modifier
     ) {
         Page.entries.map {
             NavigationRailItem(
@@ -121,7 +122,7 @@ fun TabNavigationRail(
                     .padding(8.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .height(50.dp)
-                    .background(if (it == currentPage) Color(42, 199, 219) else Color(245, 245, 245)),
+                    .background(if (it == currentPage) lightTheme.primary else lightTheme.surface),
                 icon = { Text(text = it.name, color = Color.Black) },
                 selected = it == currentPage,
                 onClick = { onTabSelect(it) },

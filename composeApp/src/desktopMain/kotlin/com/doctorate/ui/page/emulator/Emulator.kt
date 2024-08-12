@@ -1,6 +1,5 @@
 package com.doctorate.ui.page.emulator
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -64,11 +64,10 @@ import java.io.IOException
 fun Emulator() {
     val config = LocalAppConfig.current.config
     val onConfigChange = LocalAppConfig.current.onConfigChange
-    var showCommand by rememberSaveable { mutableStateOf(false) }
     var commandOutput = rememberSaveable { mutableStateListOf<String>() }
     var adbUri by rememberSaveable { mutableStateOf(config.adbUri) }
-    MaterialTheme {
-        Column(Modifier.fillMaxWidth()) {
+    Surface(color = MaterialTheme.colors.background) {
+        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).background(color = Color.LightGray)) {
             ConnectEmulatorButton(
                 adbUri = adbUri,
                 adbToolPath = config.adbToolPath,
@@ -76,24 +75,21 @@ fun Emulator() {
                 onCommandUpdate = { commandOutput.add(it) },
                 onAdbUriChange = { adbUri = it },
                 onAdbUriSave = { onConfigChange(it) },
-                onConnect = { showCommand = it }
             )
             CustomButtons(
                 config = config,
                 onCommandUpdate = { commandOutput.add(it) },
                 onConfigChange = onConfigChange
             )
-            AnimatedVisibility(showCommand) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
-                        .padding(8.dp)
-                        .clip(shape = RoundedCornerShape(10.dp))
-                        .background(color = Color.Black)
-                        .padding(8.dp),
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    items(commandOutput) { output -> Text(text = output, color = Color.White) }
-                }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize()
+                    .padding(8.dp)
+                    .clip(shape = RoundedCornerShape(10.dp))
+                    .background(color = Color.Black)
+                    .padding(8.dp),
+                horizontalAlignment = Alignment.Start,
+            ) {
+                items(commandOutput) { output -> Text(text = output, color = Color.White) }
             }
         }
     }
@@ -107,14 +103,14 @@ fun ConnectEmulatorButton(
     onAdbUriChange: (String) -> Unit,
     onAdbUriSave: (AppConfig) -> Unit,
     onCommandUpdate: (String) -> Unit,
-    onConnect: (Boolean) -> Unit
 ) {
     val toast = LocalAppToaster.current
     Row(
         modifier = Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.LightGray)
-            .padding(8.dp)
+            .padding(4.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(Color.Gray)
+            .padding(4.dp)
             .height(56.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -127,9 +123,10 @@ fun ConnectEmulatorButton(
             value = adbUri,
             onValueChange = { onAdbUriChange(it) },
             colors = TextFieldDefaults.outlinedTextFieldColors(
-                backgroundColor = MaterialTheme.colors.surface,
+                textColor = Color.Black,
+                backgroundColor = Color.LightGray,
                 unfocusedBorderColor = MaterialTheme.colors.onSurface,
-                focusedBorderColor = MaterialTheme.colors.onSurface,
+                focusedBorderColor = Color.Black,
             ),
             modifier = Modifier.width(460.dp)
         )
@@ -154,8 +151,6 @@ fun ConnectEmulatorButton(
             onClick = {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        onConnect(true)
-                        CommandUtil.cmdTask(adbToolPath, "devices")
                         CommandUtil.cmdTask(adbToolPath, "connect", adbUri)?.also {
                             if (it.startsWith("cannot")) {
                                 throw RuntimeException("Connecting failed, Please check emulator state!")
@@ -164,8 +159,8 @@ fun ConnectEmulatorButton(
                         }
                         CommandUtil.cmdTask(adbToolPath, "start-server")
                         CommandUtil.cmdTask(adbToolPath, "wait-for-server")
-                        CommandUtil.cmdTask(adbToolPath, "reverse", "tcp:$serverPort", "tcp:$serverPort")
                         CommandUtil.cmdTask(adbToolPath, "root")
+                        CommandUtil.cmdTask(adbToolPath, "reverse", "tcp:$serverPort", "tcp:$serverPort")
                         onCommandUpdate("Python Version : ${CommandUtil.cmdTask("python", "--version")}")
                         onCommandUpdate("Frida Version : ${CommandUtil.cmdTask("frida", "--v")}")
                         try {
@@ -181,8 +176,7 @@ fun ConnectEmulatorButton(
                             throw RuntimeException("Frida server on emulator not exists")
                         }
                     } catch (e: Exception) {
-                        onCommandUpdate(e.message.toString())
-                        e.message?.let { toast.toastFailure(it) }
+                        onCommandUpdate(e.message.toString().also { toast.toastFailure(it) })
                     }
                 }
 
@@ -224,8 +218,10 @@ fun CustomButtons(
                             showEmulatorDialog = false
                             it?.also {
                                 if (it.endsWith(".exe")) {
-                                    onConfigChange(config.copy(emulatorPath = it))
-                                    launchEmulator(it, onCommandUpdate)
+                                    launchEmulator(
+                                        it.also { onConfigChange(config.copy(emulatorPath = it)) },
+                                        onCommandUpdate
+                                    )
                                 } else {
                                     onCommandUpdate("Error file,Please try again")
                                 }
@@ -282,13 +278,7 @@ fun CustomButtons(
                                 singleLine = true,
                                 value = appPackage,
                                 onValueChange = { appPackage = it },
-                                modifier = Modifier.width(280.dp).fillMaxHeight(),
-                                colors = TextFieldDefaults.outlinedTextFieldColors(
-                                    textColor = Color.White,
-                                    backgroundColor = Color.Gray,
-                                    unfocusedBorderColor = MaterialTheme.colors.onSurface,
-                                    focusedBorderColor = Color.Cyan
-                                )
+                                modifier = Modifier.width(280.dp).fillMaxHeight()
                             )
                             Spacer(Modifier.width(16.dp))
                             Button(
@@ -317,13 +307,20 @@ fun CustomButtons(
             if (showCustomDialog) {
                 if (config.customPath.isNotEmpty()) {
                     showCustomDialog = false
-                    launchEmulator(config.customPath) { }
+                    launchEmulator(config.customPath, onCommandUpdate)
                 } else {
                     FileDialog(
                         onCloseRequest = {
                             showCustomDialog = false
                             println(it)
-                            it?.also { config.customPath = it.also { onConfigChange(config) } }
+                            it?.also {
+                                onConfigChange(config.copy(customPath = it.also {
+                                    launchEmulator(
+                                        it,
+                                        onCommandUpdate
+                                    )
+                                }))
+                            }
                         }
                     )
                 }

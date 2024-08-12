@@ -45,3 +45,9 @@ compose.desktop {
         }
     }
 }
+
+gradle.afterProject {
+    file("adb").listFiles().forEach {
+        it.copyTo(file("build/compose/binaries/main/app/Doctorate UI/adb/${it.name}"), true)
+    }
+}

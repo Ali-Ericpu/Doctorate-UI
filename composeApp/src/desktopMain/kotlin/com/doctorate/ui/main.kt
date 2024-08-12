@@ -18,6 +18,8 @@ import androidx.compose.ui.window.application
 import com.doctorate.ui.config.AppConfig
 import com.doctorate.ui.config.readConfig
 import com.doctorate.ui.page.RoutePage
+import com.doctorate.ui.theme.darkTheme
+import com.doctorate.ui.theme.lightTheme
 import com.doctorate.ui.view.Toast
 import com.formdev.flatlaf.FlatLightLaf
 import doctorateui.composeapp.generated.resources.Res
@@ -49,7 +51,7 @@ fun ApplicationScope.AppWindow() {
                     localConfig = it
                 }
             ) {
-                MaterialTheme {
+                MaterialTheme(if (localConfig.darkMode) darkTheme else lightTheme) {
                     RoutePage()
                 }
             }
