@@ -1,31 +1,16 @@
 package com.doctorate.ui.page.emulator
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.TextFieldDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogState
 import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.WindowPosition
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doctorate.ui.config.AppConfig
 import com.doctorate.ui.config.LocalAppConfig
 import com.doctorate.ui.config.readConfig
@@ -61,10 +47,12 @@ import java.io.IOException
  */
 @Composable
 @Preview
-fun Emulator() {
+fun Emulator(
+    viewModel: EmulatorViewModel = viewModel { EmulatorViewModel() }
+) {
     val config = LocalAppConfig.current.config
     val onConfigChange = LocalAppConfig.current.onConfigChange
-    var commandOutput = rememberSaveable { mutableStateListOf<String>() }
+    val commandOutput = viewModel.commandOutput()
     var adbUri by rememberSaveable { mutableStateOf(config.adbUri) }
     Surface(color = MaterialTheme.colors.background) {
         Column(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).background(color = Color.LightGray)) {
@@ -72,24 +60,37 @@ fun Emulator() {
                 adbUri = adbUri,
                 adbToolPath = config.adbToolPath,
                 serverPort = config.serverPort,
-                onCommandUpdate = { commandOutput.add(it) },
+                onCommandUpdate = { viewModel.commandUpdate(it) },
                 onAdbUriChange = { adbUri = it },
                 onAdbUriSave = { onConfigChange(it) },
             )
             CustomButtons(
                 config = config,
-                onCommandUpdate = { commandOutput.add(it) },
+                onCommandUpdate = { viewModel.commandUpdate(it) },
                 onConfigChange = onConfigChange
             )
-            LazyColumn(
-                modifier = Modifier.fillMaxSize()
-                    .padding(8.dp)
-                    .clip(shape = RoundedCornerShape(10.dp))
-                    .background(color = Color.Black)
-                    .padding(8.dp),
-                horizontalAlignment = Alignment.Start,
-            ) {
-                items(commandOutput) { output -> Text(text = output, color = Color.White) }
+            Box {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
+                        .padding(8.dp)
+                        .clip(shape = RoundedCornerShape(10.dp))
+                        .background(color = Color.Black)
+                        .padding(8.dp),
+                    horizontalAlignment = Alignment.Start,
+                ) {
+                    items(commandOutput) { output -> Text(text = output, color = Color.White) }
+                }
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "clear",
+                    modifier = Modifier.padding(40.dp)
+                        .size(56.dp)
+                        .align(Alignment.BottomEnd)
+                        .background(color = MaterialTheme.colors.primary, shape = CircleShape)
+                        .clickable{ viewModel.clearCommand() }
+                        .padding(12.dp)
+
+                )
             }
         }
     }
@@ -164,6 +165,7 @@ fun ConnectEmulatorButton(
                         onCommandUpdate("Python Version : ${CommandUtil.cmdTask("python", "--version")}")
                         onCommandUpdate("Frida Version : ${CommandUtil.cmdTask("frida", "--v")}")
                         try {
+                            onCommandUpdate("running frida-server")
                             CommandUtil.cmdAsyncTask(
                                 adbToolPath,
                                 "shell",
@@ -171,7 +173,6 @@ fun ConnectEmulatorButton(
                                 "&",
                                 onCommandUpdate = onCommandUpdate
                             )
-                            onCommandUpdate("running frida-server")
                         } catch (_: IOException) {
                             throw RuntimeException("Frida server on emulator not exists")
                         }
@@ -197,7 +198,6 @@ fun CustomButtons(
     var showScriptDialog by remember { mutableStateOf(false) }
     var showPackageDialog by remember { mutableStateOf(false) }
     var showCustomDialog by remember { mutableStateOf(false) }
-    var appPackage by rememberSaveable { mutableStateOf(config.appPackageName) }
     var scriptState by rememberSaveable { mutableStateOf(File(config.scriptPath).exists()) }
     Row(
         modifier = Modifier.fillMaxWidth().padding(8.dp).height(56.dp),
@@ -260,42 +260,16 @@ fun CustomButtons(
                     showPackageDialog = false
                     launchGame(config, toast, onCommandUpdate)
                 } else {
-                    DialogWindow(
-                        onCloseRequest = { showPackageDialog = false },
-                        resizable = false,
+                    EnterTextDialog(
                         title = "Enter appPackage name",
-                        state = DialogState(
-                            size = DpSize(400.dp, 120.dp),
-                            position = WindowPosition(Alignment.Center)
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceAround
-                        ) {
-                            OutlinedTextField(
-                                singleLine = true,
-                                value = appPackage,
-                                onValueChange = { appPackage = it },
-                                modifier = Modifier.width(280.dp).fillMaxHeight()
-                            )
-                            Spacer(Modifier.width(16.dp))
-                            Button(
-                                onClick = {
-                                    if (appPackage.isNotEmpty()) {
-                                        showPackageDialog = false
-                                        onConfigChange(
-                                            config.copy(appPackageName = appPackage)
-                                                .also { launchGame(it, toast, onCommandUpdate) })
-                                    }
-                                },
-                                modifier = Modifier.fillMaxHeight()
-                            ) {
-                                Text("Save")
+                        onSave = {
+                            showPackageDialog = false
+                            it?.let {
+                                config.copy(appPackageName = it).also { onConfigChange(it) }
+                                    .also { launchGame(it, toast, onCommandUpdate) }
                             }
                         }
-                    }
+                    )
                 }
             }
         }
@@ -324,6 +298,44 @@ fun CustomButtons(
                         }
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun EnterTextDialog(
+    title: String,
+    onSave: (String?) -> Unit,
+) {
+    var value by remember { mutableStateOf("") }
+    DialogWindow(
+        onCloseRequest = { onSave(null) },
+        resizable = false,
+        title = title,
+        state = DialogState(
+            size = DpSize(400.dp, 120.dp),
+            position = WindowPosition(Alignment.Center)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceAround
+        ) {
+            OutlinedTextField(
+                singleLine = true,
+                value = value,
+                onValueChange = { value = it },
+                modifier = Modifier.width(280.dp).fillMaxHeight()
+            )
+            Spacer(Modifier.width(16.dp))
+            Button(
+                enabled = value.isNotEmpty(),
+                onClick = { onSave(value) },
+                modifier = Modifier.fillMaxHeight()
+            ) {
+                Text("Save")
             }
         }
     }

@@ -17,6 +17,8 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositories {
+        mavenCentral()
+        maven { url = uri("https://maven.aliyun.com/repository/public/") }
         google {
             mavenContent {
                 includeGroupAndSubgroups("androidx")
@@ -24,7 +26,6 @@ dependencyResolutionManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
-        mavenCentral()
     }
 }
 

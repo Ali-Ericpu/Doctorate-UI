@@ -1,6 +1,7 @@
 package com.doctorate.ui.util
 
 import com.google.gson.GsonBuilder
+import ognl.Ognl
 import java.io.File
 
 /**
@@ -21,8 +22,18 @@ object JsonUtil {
     }
 
     fun <T> fromJson(file: File, clazz: Class<T>): T {
-        val readText = file.readText(Charsets.UTF_8)
-        return gson.fromJson(readText, clazz)
+        return gson.fromJson(file.readText(Charsets.UTF_8), clazz)
+    }
+
+    fun transToMap(file: File): Map<String, Any> {
+        return gson.fromJson(file.readText(Charsets.UTF_8), Map::class.java) as Map<String, Any>
+    }
+
+    /**
+     * @return Any 需要手动强转类型
+     */
+    fun getValue(map: Map<*, *>, path: String): Any? {
+        return Ognl.getValue(path, map)
     }
 
     fun <T> fromJson(json: String, clazz: Class<T>): T {
@@ -34,7 +45,7 @@ object JsonUtil {
     }
 
     fun writeJson(json: String, file: File) {
-        factory.newThread{ file.parentFile.mkdirs().also { file.writeText(json) } }.start()
+        factory.newThread { file.parentFile.mkdirs().also { file.writeText(json) } }.start()
     }
 
     fun writeJson(any: Any, file: File) {

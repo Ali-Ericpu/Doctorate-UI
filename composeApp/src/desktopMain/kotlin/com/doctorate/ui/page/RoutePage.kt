@@ -23,6 +23,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.doctorate.ui.App
+import com.doctorate.ui.config.LocalAppConfig
+import com.doctorate.ui.page.character.Character
 import com.doctorate.ui.page.emulator.Emulator
 import com.doctorate.ui.page.setting.Setting
 import com.doctorate.ui.theme.lightTheme
@@ -41,6 +43,7 @@ enum class Page(val route: String, val desc: String) {
 @Composable
 @Preview
 fun RoutePage() {
+    val config = LocalAppConfig.current.config
     val navController = rememberNavController()
     val backStackEntry = navController.currentBackStackEntryAsState()
     var currentPage = Page.getRoute(backStackEntry.value?.destination?.route)
@@ -51,7 +54,7 @@ fun RoutePage() {
                 onTabSelect = { navController.navigateSingleTopTo(it.name) },
                 modifier = Modifier.fillMaxHeight().weight(1f)
             )
-            Box(modifier = Modifier.fillMaxHeight().weight(4f).padding(20.dp)) {
+            Box(modifier = Modifier.fillMaxHeight().weight(4f).padding(12.dp)) {
                 NavHost(
                     navController = navController,
                     startDestination = Page.Emulator.name,
@@ -87,7 +90,11 @@ fun RoutePage() {
                         Setting()
                     }
                     composable(route = Page.Nothing.name) {
-                        App()
+                        if (config.extraMode) {
+                            Character()
+                        } else {
+                            App()
+                        }
                     }
                 }
             }

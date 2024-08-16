@@ -39,7 +39,7 @@ fun ApplicationScope.AppWindow() {
         onCloseRequest = ::exitApplication,
         icon = painterResource(Res.drawable.compose_multiplatform),
         title = "DoctorateUI",
-        resizable = false,
+        resizable = true,
         state = WindowState(
             size = DpSize(1024.dp, 680.dp),
             position = WindowPosition(Alignment.Center)
