@@ -1,9 +1,12 @@
 package com.doctorate.ui.network.datasource
 
 import com.doctorate.ui.config.readConfig
-import com.doctorate.ui.entity.Char
+import com.doctorate.ui.entity.Result
+import com.doctorate.ui.entity.SaveCharBody
 import com.doctorate.ui.network.client.NetworkModule
 import com.doctorate.ui.network.retrofit.CharacterApiService
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import okhttp3.MediaType.Companion.toMediaType
 import retrofit2.Retrofit
 
 /**
@@ -16,19 +19,24 @@ import retrofit2.Retrofit
  */
 object CharacterDataSource {
 
-    private val config = readConfig()
-    private val serverUri = "http://${config.serverUri}:${config.serverPort}"
+    private fun getServerUri(): String{
+        val config = readConfig()
+        return if (config.serverPort.isBlank()) config.serverUri else "${config.serverUri}:${config.serverPort}"
+    }
 
     private val service = Retrofit.Builder()
-        .baseUrl(serverUri)
+        .baseUrl(getServerUri())
         .client(NetworkModule.providesOkHttpClient())
-        .addConverterFactory(NetworkModule.providesNetworkJson())
+        .addConverterFactory(NetworkModule.providesNetworkJson().asConverterFactory("application/json".toMediaType()))
         .build()
-        .create<CharacterApiService>(CharacterApiService::class.java)
+        .create(CharacterApiService::class.java)
 
-    suspend fun syncCharacter(adminKey: String, uid: String): MutableMap<String, Char> {
+    suspend fun syncCharacter(adminKey: String, uid: String): Result {
         return service.syncCharacter(adminKey, uid)
     }
 
+    suspend fun saveCharacter(adminKey: String, saveCharBody: SaveCharBody): Result {
+        return service.saveCharacter(adminKey, saveCharBody)
+    }
 
 }

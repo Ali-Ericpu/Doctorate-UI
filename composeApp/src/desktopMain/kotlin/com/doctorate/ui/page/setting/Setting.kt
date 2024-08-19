@@ -28,6 +28,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.doctorate.ui.config.LocalAppConfig
 import com.doctorate.ui.view.FileDialog
+import doctorateui.composeapp.generated.resources.Res
+import doctorateui.composeapp.generated.resources.app_pack_name
+import doctorateui.composeapp.generated.resources.custom_path
+import doctorateui.composeapp.generated.resources.dark_mode
+import doctorateui.composeapp.generated.resources.emulator_path
+import doctorateui.composeapp.generated.resources.reset
+import doctorateui.composeapp.generated.resources.save
+import doctorateui.composeapp.generated.resources.select
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * ClassName: Setting
@@ -44,21 +53,21 @@ fun Setting() {
     Column {
         EditPathColumn(
             value = config.emulatorPath,
-            label = "Emulator Path",
+            label = stringResource(Res.string.emulator_path),
             onValueChange = { it?.let { onConfigChange(config.copy(emulatorPath = it)) } }
         )
         EditPathColumn(
             value = config.customPath,
-            label = "Custom Path",
+            label = stringResource(Res.string.custom_path),
             onValueChange = { it?.let { onConfigChange(config.copy(customPath = it)) } }
         )
         EditValueRow(
             value = config.appPackageName,
-            leading = "App Package Name :",
+            leading = stringResource(Res.string.app_pack_name),
             onValueSave = { onConfigChange(config.copy(appPackageName = it)) }
         )
         EditSwitch(
-            value = "Dark Mode",
+            content = stringResource(Res.string.dark_mode),
             state = config.darkMode,
             onCheckedChange = { onConfigChange(config.copy(darkMode = it)) }
         )
@@ -105,7 +114,7 @@ fun EditPathColumn(
                 onClick = { showDialog = true },
                 modifier = modifier
             ) {
-                Text(text = "Select")
+                Text(text = stringResource(Res.string.select))
                 if (showDialog) {
                     FileDialog(
                         onCloseRequest = {
@@ -120,7 +129,7 @@ fun EditPathColumn(
                 onClick = { onValueChange("") },
                 modifier = modifier
             ) {
-                Text(text = "Reset")
+                Text(text = stringResource(Res.string.reset))
             }
         }
     }
@@ -165,7 +174,7 @@ fun EditValueRow(
                 .width(100.dp)
                 .clip(RoundedCornerShape(8.dp))
         ) {
-            Text(text = "Save")
+            Text(text = stringResource(Res.string.save))
         }
     }
 
@@ -173,7 +182,7 @@ fun EditValueRow(
 
 @Composable
 fun EditSwitch(
-    value: String,
+    content: String,
     state: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -189,7 +198,7 @@ fun EditSwitch(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = value, color = Color.Black, modifier = Modifier.padding(8.dp).fillMaxHeight())
+        Text(text = content, color = Color.Black, modifier = Modifier.padding(8.dp).fillMaxHeight())
         Switch(
             checked = state,
             onCheckedChange = { onCheckedChange(it.also { state = it }) }

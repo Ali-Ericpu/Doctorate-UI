@@ -1,0 +1,35 @@
+<resources>
+    <string name="app_name">Doctorate UI</string>
+    <string name="title">Doctorate UI</string>
+    <string name="save">Save</string>
+    <string name="connect_emulator">Connect Emulator</string>
+    <string name="open_emulator">Open Emulator</string>
+    <string name="select_script">Select Script</string>
+    <string name="launch_game">Launch Game</string>
+    <string name="custom">Custom</string>
+    <string name="all">ALL</string>
+    <string name="back">BACK</string>
+    <string name="cancel">Cancel</string>
+    <string name="sift">Sift</string>
+    <string name="select">Select</string>
+    <string name="reset">Reset</string>
+    <string name="lv">LV</string>
+    <string name="level">Level</string>
+    <string name="fav_pt">FavorPoint</string>
+    <string name="type_package">Type app packageName</string>
+    <string name="elite_phase">EvolvePhase</string>
+    <string name="potential">Potential</string>
+    <string name="skill_level">Skill Level</string>
+    <string name="star_mark">Star Mark</string>
+    <string name="adb_uri">ADB URI : </string>
+    <string name="app_pack_name">APP Package Name : </string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="custom_path">Custom Path</string>
+    <string name="emulator_path">Emulator Path</string>
+    <string name="setting">Setting</string>
+    <string name="refresh">Refresh</string>
+    <string name="server_uri">Server URI</string>
+    <string name="port">Port</string>
+    <string name="uid">UID</string>
+    <string name="admin_key">Admin Key</string>
+</resources>

@@ -21,10 +21,11 @@ import com.doctorate.ui.page.RoutePage
 import com.doctorate.ui.theme.darkTheme
 import com.doctorate.ui.theme.lightTheme
 import com.doctorate.ui.view.Toast
-import com.formdev.flatlaf.FlatLightLaf
 import doctorateui.composeapp.generated.resources.Res
 import doctorateui.composeapp.generated.resources.compose_multiplatform
+import doctorateui.composeapp.generated.resources.title
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 fun main() = application {
     AppWindow()
@@ -33,15 +34,14 @@ fun main() = application {
 @Composable
 @Preview
 fun ApplicationScope.AppWindow() {
-    FlatLightLaf.setup()
     var localConfig by remember { mutableStateOf(readConfig()) }
     Window(
         onCloseRequest = ::exitApplication,
         icon = painterResource(Res.drawable.compose_multiplatform),
-        title = "DoctorateUI",
+        title = stringResource(Res.string.title),
         resizable = true,
         state = WindowState(
-            size = DpSize(1024.dp, 680.dp),
+            size = DpSize(1100.dp, 680.dp),
             position = WindowPosition(Alignment.Center)
         )
     ) {

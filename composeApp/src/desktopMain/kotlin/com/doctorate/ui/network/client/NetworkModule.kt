@@ -1,9 +1,8 @@
 package com.doctorate.ui.network.client
 
-import com.google.gson.GsonBuilder
+import kotlinx.serialization.json.Json
 import okhttp3.Call
 import okhttp3.OkHttpClient
-import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 /**
@@ -15,9 +14,10 @@ import java.util.concurrent.TimeUnit
  * @Version 1.0
  */
 object NetworkModule {
-    private val gson = GsonConverterFactory.create(GsonBuilder().serializeNulls().create())
 
-    fun providesNetworkJson(): GsonConverterFactory = gson
+    fun providesNetworkJson(): Json = Json {
+        ignoreUnknownKeys = true
+    }
 
     fun okhttpCallFactory(okHttpClient: OkHttpClient): Call.Factory = okHttpClient
 

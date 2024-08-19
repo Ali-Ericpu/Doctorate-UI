@@ -1,10 +1,22 @@
 package com.doctorate.ui.page.character
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,36 +29,57 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.Button
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
+import androidx.compose.material.TextFieldDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogState
+import androidx.compose.ui.window.DialogWindow
+import androidx.compose.ui.window.WindowPosition
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.doctorate.ui.config.AppConfig
 import com.doctorate.ui.config.LocalAppConfig
 import com.doctorate.ui.config.Table
 import com.doctorate.ui.entity.Char
 import com.doctorate.ui.entity.Profession
-import com.doctorate.ui.network.datasource.CharacterDataSource
 import com.doctorate.ui.view.LocalAppToaster
 import com.seiko.imageloader.model.ImageRequest
 import com.seiko.imageloader.rememberImagePainter
 import doctorateui.composeapp.generated.resources.Res
+import doctorateui.composeapp.generated.resources.admin_key
+import doctorateui.composeapp.generated.resources.cancel
 import doctorateui.composeapp.generated.resources.character_charbg_1
 import doctorateui.composeapp.generated.resources.character_charbg_2
 import doctorateui.composeapp.generated.resources.character_charbg_3
@@ -92,6 +125,7 @@ import doctorateui.composeapp.generated.resources.character_upperhub_5
 import doctorateui.composeapp.generated.resources.character_upperhub_6
 import doctorateui.composeapp.generated.resources.character_upperhub_shadow
 import doctorateui.composeapp.generated.resources.equip_bg
+import doctorateui.composeapp.generated.resources.icon
 import doctorateui.composeapp.generated.resources.icon_profession_caster
 import doctorateui.composeapp.generated.resources.icon_profession_medic
 import doctorateui.composeapp.generated.resources.icon_profession_pioneer
@@ -100,13 +134,19 @@ import doctorateui.composeapp.generated.resources.icon_profession_special
 import doctorateui.composeapp.generated.resources.icon_profession_support
 import doctorateui.composeapp.generated.resources.icon_profession_tank
 import doctorateui.composeapp.generated.resources.icon_profession_warrior
+import doctorateui.composeapp.generated.resources.lv
+import doctorateui.composeapp.generated.resources.port
 import doctorateui.composeapp.generated.resources.profession_select
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import doctorateui.composeapp.generated.resources.save
+import doctorateui.composeapp.generated.resources.server_uri
+import doctorateui.composeapp.generated.resources.setting
+import doctorateui.composeapp.generated.resources.uid
 import kotlinx.coroutines.launch
 import okio.Path.Companion.toPath
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import java.io.File
+import kotlin.math.roundToInt
 
 /**
  * ClassName: Character
@@ -122,79 +162,160 @@ fun Character(
     viewModel: CharacterViewModel = viewModel { CharacterViewModel() }
 ) {
     val config = LocalAppConfig.current.config
+    val onConfigChange = LocalAppConfig.current.onConfigChange
     val toaster = LocalAppToaster.current
     val currentProfession by viewModel.profession.collectAsState()
     val selectProfession by viewModel.isSelect.collectAsState()
+    val showLoadAnimate by viewModel.loadAnimate.collectAsState()
+    val splash by viewModel.splash.collectAsState()
+    val isEditConfig by viewModel.isEditConfig.collectAsState()
     val charList = viewModel.syncCharList()
-
+    val coroutineScope = rememberCoroutineScope()
     val professions = Profession.entries.toList()
+    val professionOffsetX by animateFloatAsState(if (selectProfession) 0f else 1.2f)
+    val menuOffsetX by animateFloatAsState(if (!selectProfession) 0f else 1.5f)
     Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(GridCells.FixedSize(138.dp)) {
             items(charList) {
-                CharacterCard(it) { viewModel.changeCharData(it) }
+                CharacterCard(it) {
+                    coroutineScope.launch {
+                        try {
+                            viewModel.changeCharData(it, config.adminKey, config.uid)
+                        } catch (e: Exception) {
+                            toaster.toastFailure(e.message.toString())
+                        }
+                    }
+                }
             }
         }
         Box(modifier = Modifier.width(66.dp).align(alignment = Alignment.TopEnd).padding(top = 24.dp)) {
-            if (selectProfession) {
-                LazyColumn(userScrollEnabled = false, modifier = Modifier.fillMaxHeight()) {
-                    item {
-                        IconButton(
-                            onClick = {
-                                if (currentProfession == "ALL") {
-                                    viewModel.changeSelectState(false)
-                                } else {
-                                    viewModel.selectProfession("ALL")
-                                }
-                            },
-                            modifier = Modifier.height(66.dp)
-                                .fillMaxWidth()
-                                .background(Color.Black.copy(alpha = 0.7f))
-                                .align(alignment = Alignment.Center)
-                        ) {
-                            Text(
-                                text = if (currentProfession == "ALL") "BACK" else "ALL",
-                                textAlign = TextAlign.Center,
-                                style = TextStyle(color = MaterialTheme.colors.primary)
+            LazyColumn(
+                userScrollEnabled = false,
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(4.dp))
+                    .offsetPercent(offsetPercentX = professionOffsetX)
+            ) {
+                item {
+                    IconButton(
+                        onClick = {
+                            if (currentProfession == "ALL") {
+                                viewModel.changeSelectState(false)
+                            } else {
+                                viewModel.selectProfession("ALL")
+                            }
+                        },
+                        modifier = Modifier.height(66.dp)
+                            .fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.7f))
+                            .align(alignment = Alignment.Center)
+                    ) {
+                        Text(
+                            text = if (currentProfession == "ALL") "BACK" else "ALL",
+                            textAlign = TextAlign.Center,
+                            style = TextStyle(color = MaterialTheme.colors.primary)
+                        )
+                    }
+                }
+                items(professions) {
+                    Box {
+                        Image(
+                            painter = painterResource(it.icon),
+                            contentDescription = it.name,
+                            modifier = Modifier.alpha(0.7f)
+                                .clickable(onClick = { viewModel.selectProfession(it.name) })
+                        )
+                        if (currentProfession == it.name) {
+                            Image(
+                                painter = painterResource(Res.drawable.profession_select),
+                                contentDescription = "select",
+                                alignment = Alignment.CenterEnd,
+                                modifier = Modifier.fillMaxWidth().height(66.dp)
                             )
                         }
                     }
-                    items(professions) {
-                        Box {
-                            Image(
-                                painter = painterResource(it.icon),
-                                contentDescription = it.name,
-                                modifier = Modifier.alpha(0.7f)
-                                    .clickable(onClick = { viewModel.selectProfession(it.name) })
-                            )
-                            if (currentProfession == it.name) {
-                                Image(
-                                    painter = painterResource(Res.drawable.profession_select),
-                                    contentDescription = "select",
-                                    alignment = Alignment.CenterEnd,
-                                    modifier = Modifier.fillMaxWidth().height(66.dp)
-                                )
+                }
+            }
+            if (!splash) {
+                Column(modifier = Modifier.offsetPercent(offsetPercentX = menuOffsetX)) {
+                    CircleIconButton(
+                        icon = Icons.Default.Menu,
+                        onclick = { viewModel.changeSelectState(true) }
+                    )
+                    CircleIconButton(
+                        icon = Icons.Default.Settings,
+                        onclick = { viewModel.changeEditState() }
+                    )
+                    Icons.Default.Menu
+                    CircleIconButton(
+                        icon = Icons.Default.Refresh,
+                        onclick = {
+                            coroutineScope.launch {
+                                try {
+                                    viewModel.initCharData(config.adminKey, config.uid)
+                                } catch (e: Exception) {
+                                    viewModel.closeAnimate()
+                                    toaster.toastFailure(e.message.toString())
+                                }
                             }
                         }
+                    )
+                }
+            }
+        }
+        if (splash) {
+            CircleIconButton(
+                icon = Icons.Default.Build,
+                onclick = {
+                    coroutineScope.launch {
+                        try {
+                            viewModel.initCharData(config.adminKey, config.uid)
+                        } catch (e: Exception) {
+                            viewModel.closeAnimate()
+                            toaster.toastFailure(e.message.toString())
+                        }
                     }
-                }
-            } else {
-                Button(onClick = { viewModel.changeSelectState(true) }) {
-                    Text(text = "All")
-                }
+                },
+                size = 60,
+                modifier = Modifier.align(alignment = Alignment.Center)
+            )
+        }
+        AnimatedVisibility(
+            visible = showLoadAnimate,
+            enter = fadeIn(
+                initialAlpha = 0.1f,
+                animationSpec = tween(100)
+            ),
+            exit = fadeOut(
+                targetAlpha = 0f,
+                animationSpec = tween(800)
+            )
+        ) {
+            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background)) {
+                val rotate by rememberInfiniteTransition().animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(800, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart
+                    )
+                )
+                Icon(
+                    painter = painterResource(Res.drawable.icon),
+                    null,
+                    modifier = Modifier.size(100.dp).rotate(rotate).align(alignment = Alignment.Center)
+                )
             }
         }
-        Button(onClick = {
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val data = CharacterDataSource.syncCharacter(config.adminKey, config.uid)
-                    viewModel.initCharData(data)
-                } catch (e: Exception) {
-                    toaster.toastFailure(e.message.toString())
-                }
+    }
+    if (isEditConfig) {
+        ExtraSettingDialog(
+            config = config,
+            onValueSave = {
+                viewModel.changeEditState()
+                it?.let { onConfigChange(it) }
             }
-        }) {
-            Text(text = "get")
-        }
+        )
     }
 }
 
@@ -272,7 +393,6 @@ fun CharacterCard(
         Box(
             modifier = Modifier.padding(4.dp).height(260.dp).width(130.dp).align(Alignment.TopCenter),
         ) {
-
             //char bg
             Image(
                 painter = painterResource(charBgPainter),
@@ -285,7 +405,6 @@ fun CharacterCard(
                 modifier = Modifier.fillMaxSize()
             )
             //char skin
-
             val portrait = File("data/portrait/${Table.getSkinPortraitId(char.skin)}.png").absolutePath
             Image(
                 painter = rememberImagePainter(ImageRequest(data = portrait.toPath())),
@@ -395,7 +514,7 @@ fun CharacterCard(
             modifier = Modifier.padding(start = 6.dp, bottom = 32.dp).width(50.dp).align(Alignment.BottomStart)
         )
         Text(
-            text = "LV",
+            text = stringResource(Res.string.lv),
             color = Color.White,
             style = TextStyle(
                 fontWeight = FontWeight.Normal,
@@ -411,12 +530,152 @@ fun CharacterCard(
             modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 4.dp, end = 8.dp)
         )
     }
-    AnimatedVisibility(showDetail) {
+    if (showDetail) {
         CharacterDetail(char.copy()) {
             showDetail = false
             it?.let { onCharChange(it) }
-            /*TODO()*/
         }
     }
 }
+
+fun Modifier.offsetPercent(offsetPercentX: Float = 0f, offsetPercentY: Float = 0f): Modifier =
+    this.layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        layout(placeable.width, placeable.height) {
+            val offsetX = (offsetPercentX * placeable.width).roundToInt()
+            val offsetY = (offsetPercentY * placeable.height).roundToInt()
+            placeable.place(offsetX, offsetY)
+        }
+    }
+
+@Composable
+fun CircleIconButton(
+    icon: ImageVector,
+    onclick: () -> Unit,
+    size: Int = 48,
+    modifier: Modifier = Modifier
+) {
+    IconButton(onClick = { onclick() }, modifier = modifier) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color.Black,
+            modifier = Modifier
+                .padding(8.dp)
+                .size(size.dp)
+                .background(color = MaterialTheme.colors.primary, shape = CircleShape)
+                .padding(12.dp)
+        )
+    }
+}
+
+@Composable
+fun ExtraSettingDialog(config: AppConfig, onValueSave: (AppConfig?) -> Unit) {
+    DialogWindow(
+        onCloseRequest = { onValueSave(null) },
+        resizable = false,
+        title = stringResource(Res.string.setting),
+        state = DialogState(
+            size = DpSize(400.dp, 380.dp),
+            position = WindowPosition(Alignment.Center)
+        )
+    ) {
+        var serverUri by remember { mutableStateOf(config.serverUri) }
+        var serverPort by remember { mutableStateOf(config.serverPort) }
+        var uid by remember { mutableStateOf(config.uid) }
+        var adminKey by remember { mutableStateOf(config.adminKey) }
+        val textColors = TextFieldDefaults.outlinedTextFieldColors(
+            textColor = Color.Black,
+            focusedBorderColor = Color.Black,
+            unfocusedBorderColor = Color.DarkGray,
+            focusedLabelColor = Color.Black,
+            unfocusedLabelColor = Color.DarkGray,
+        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceAround,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp)
+                .background(color = Color.LightGray, shape = RoundedCornerShape(8.dp))
+        ) {
+            Text(
+                "If you change Server URI or Port",
+                color = Color.Black,
+                modifier = Modifier.padding(8.dp)
+            )
+            Text(
+                "You need reboot this Program!!!",
+                color = Color.Black,
+                modifier = Modifier.padding(8.dp)
+            )
+            Row {
+                OutlinedTextField(
+                    value = serverUri,
+                    onValueChange = { serverUri = it },
+                    label = { Text(stringResource(Res.string.server_uri)) },
+                    singleLine = true,
+                    colors = textColors,
+                    modifier = Modifier.padding(8.dp).weight(7f),
+                )
+                OutlinedTextField(
+                    value = serverPort,
+                    onValueChange = { serverPort = it },
+                    label = { Text(stringResource(Res.string.port)) },
+                    isError = serverPort.isNotBlank() && (serverPort.toIntOrNull() == null || serverPort.toUInt() > 65536u),
+                    singleLine = true,
+                    colors = textColors,
+                    modifier = Modifier.padding(8.dp).weight(3f),
+                )
+            }
+            Row {
+                OutlinedTextField(
+                    value = uid,
+                    onValueChange = { uid = it },
+                    label = { Text(stringResource(Res.string.uid)) },
+                    isError = uid.isNotBlank() && uid.toDoubleOrNull() == null,
+                    singleLine = true,
+                    colors = textColors,
+                    modifier = Modifier.padding(8.dp).weight(1f),
+                )
+                OutlinedTextField(
+                    value = adminKey,
+                    onValueChange = { adminKey = it },
+                    label = { Text(stringResource(Res.string.admin_key)) },
+                    singleLine = true,
+                    colors = textColors,
+                    modifier = Modifier.padding(8.dp).weight(1f),
+                )
+            }
+            Row(
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                TextButton(
+                    onClick = { onValueSave(null) },
+                    modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colors.primary)
+                ) {
+                    Text(text = stringResource(Res.string.cancel), color = Color.Black)
+                }
+                TextButton(
+                    onClick = {
+                        onValueSave(
+                            config.copy(
+                                serverUri = serverUri,
+                                serverPort = serverPort,
+                                uid = uid,
+                                adminKey = adminKey,
+                            )
+                        )
+                    },
+                    modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colors.primary)
+                ) {
+                    Text(text = stringResource(Res.string.save), color = Color.Black)
+                }
+            }
+        }
+    }
+}
+
 

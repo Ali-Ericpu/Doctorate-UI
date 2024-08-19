@@ -1,14 +1,8 @@
 package com.doctorate.ui.view
 
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
 
 @Composable
 fun Loading() {
@@ -21,5 +15,5 @@ fun Loading() {
         )
     )
 
-    Icon(painter = painterResource("icon_loading.png"), null, modifier = Modifier.size(20.dp).rotate(rotate))
+//    Icon(painter = painterResource("icon_loading.png"), null, modifier = Modifier.size(20.dp).rotate(rotate))
 }

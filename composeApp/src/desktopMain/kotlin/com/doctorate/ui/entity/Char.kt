@@ -9,6 +9,7 @@ import doctorateui.composeapp.generated.resources.character_profession_special
 import doctorateui.composeapp.generated.resources.character_profession_support
 import doctorateui.composeapp.generated.resources.character_profession_tank
 import doctorateui.composeapp.generated.resources.character_profession_warrior
+import kotlinx.serialization.Serializable
 import org.jetbrains.compose.resources.DrawableResource
 
 /**
@@ -19,12 +20,13 @@ import org.jetbrains.compose.resources.DrawableResource
  * @Create 2024/8/13 14:46
  * @Version 1.0
  */
+@Serializable
 data class Char(
     val instId: Int,
     val charId: String,
-    var name: String?,
-    var rarity: Int?,
-    var profession: String?,
+    var name: String? = null,
+    var rarity: Int? = null,
+    var profession: String? = null,
     var favorPoint: Int,
     var potentialRank: Int,
     var mainSkillLvl: Int,
@@ -36,15 +38,15 @@ data class Char(
     var gainTime: Long,
     var skills: MutableList<Skill>,
     var voiceLan: String,
-    var currentEquip: String?,
+    var currentEquip: String? = null,
     var equip: MutableMap<String, Equip>,
     var starMark: Int,
-    var currentTmpl: String?,
-    var tmpl: MutableMap<String, TmplChar>?
+    var currentTmpl: String? = null,
+    var tmpl: MutableMap<String, TmplChar>? = null
 ) : Comparable<Char> {
     override fun compareTo(other: Char): Int =
         when {
-            this.starMark != other.starMark -> starMark.compareTo(other.starMark)
+            this.starMark != other.starMark -> other.starMark.compareTo(starMark)
             this.evolvePhase != other.evolvePhase -> other.evolvePhase.compareTo(evolvePhase)
             this.rarity != other.rarity -> other.rarity!!.compareTo(rarity!!)
             this.level != other.level -> other.level.compareTo(level)
@@ -52,6 +54,7 @@ data class Char(
         }
 }
 
+@Serializable
 data class Skill(
     val skillId: String,
     var unlock: Int,
@@ -60,12 +63,14 @@ data class Skill(
     var completeUpgradeTime: Int,
 )
 
+@Serializable
 data class Equip(
     var hide: Int,
     var level: Int,
     var locked: Int
 )
 
+@Serializable
 data class TmplChar(
     var skinId: String,
     var defaultSkillIndex: Int,
@@ -84,3 +89,18 @@ enum class Profession(val icon: DrawableResource) {
     SUPPORT(Res.drawable.character_profession_support),
     SPECIAL(Res.drawable.character_profession_special),
 }
+
+@Serializable
+data class Result(
+    val data: Map<String, Char>? = null,
+    val msg: String,
+    val status: Int,
+    val type: String,
+)
+
+@Serializable
+data class SaveCharBody(
+    val uid: String,
+    val charInstId: Int,
+    val char: Char
+)

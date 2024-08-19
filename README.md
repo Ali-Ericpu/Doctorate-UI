@@ -8,7 +8,7 @@
 - Open Emulator ---> Choose your emulator.
 - Select Script ---> Choose your frida hook script,This program will copy it locally.
 - Launch Game ---> Enable when locally script exist,You need set android app package name.
-- Custom ---> Allow you to open custom applications.
+- Custom ---> Allow you open custom applications.
 ### Setting
 ![mainUI](picture/setting.png)
 

@@ -1,11 +1,9 @@
 package com.doctorate.ui.page.emulator
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -26,13 +24,24 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doctorate.ui.config.AppConfig
 import com.doctorate.ui.config.LocalAppConfig
 import com.doctorate.ui.config.readConfig
+import com.doctorate.ui.page.character.CircleIconButton
 import com.doctorate.ui.util.CommandUtil
 import com.doctorate.ui.view.FileDialog
 import com.doctorate.ui.view.LocalAppToaster
 import com.doctorate.ui.view.Toaster
+import doctorateui.composeapp.generated.resources.Res
+import doctorateui.composeapp.generated.resources.adb_uri
+import doctorateui.composeapp.generated.resources.connect_emulator
+import doctorateui.composeapp.generated.resources.custom
+import doctorateui.composeapp.generated.resources.launch_game
+import doctorateui.composeapp.generated.resources.open_emulator
+import doctorateui.composeapp.generated.resources.save
+import doctorateui.composeapp.generated.resources.select_script
+import doctorateui.composeapp.generated.resources.type_package
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import java.io.File
 import java.io.IOException
@@ -80,16 +89,11 @@ fun Emulator(
                 ) {
                     items(commandOutput) { output -> Text(text = output, color = Color.White) }
                 }
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "clear",
-                    modifier = Modifier.padding(40.dp)
-                        .size(56.dp)
-                        .align(Alignment.BottomEnd)
-                        .background(color = MaterialTheme.colors.primary, shape = CircleShape)
-                        .clickable{ viewModel.clearCommand() }
-                        .padding(12.dp)
-
+                CircleIconButton(
+                    icon = Icons.Default.Delete,
+                    onclick = { viewModel.clearCommand() },
+                    size = 56,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
                 )
             }
         }
@@ -100,12 +104,14 @@ fun Emulator(
 fun ConnectEmulatorButton(
     adbUri: String,
     adbToolPath: String,
-    serverPort: Int,
+    serverPort: String,
     onAdbUriChange: (String) -> Unit,
     onAdbUriSave: (AppConfig) -> Unit,
     onCommandUpdate: (String) -> Unit,
 ) {
     val toast = LocalAppToaster.current
+    val regex =
+        Regex("^((\\d|[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5])\\.){3}(\\d|[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5]):(?:[0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\$")
     Row(
         modifier = Modifier.fillMaxWidth()
             .padding(4.dp)
@@ -118,9 +124,14 @@ fun ConnectEmulatorButton(
     ) {
         OutlinedTextField(
             leadingIcon = {
-                Text(text = "ADB Uri : ", color = Color.Black, modifier = Modifier.padding(start = 8.dp))
+                Text(
+                    text = stringResource(Res.string.adb_uri),
+                    color = Color.Black,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
             },
             singleLine = true,
+            isError = !regex.matches(adbUri),
             value = adbUri,
             onValueChange = { onAdbUriChange(it) },
             colors = TextFieldDefaults.outlinedTextFieldColors(
@@ -135,23 +146,21 @@ fun ConnectEmulatorButton(
         Button(
             modifier = modifier,
             onClick = {
-                val regex =
-                    Regex("^((\\d|[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5])\\.){3}(\\d|[1-9]\\d|1\\d\\d|2[0-4]\\d|25[0-5]):(?:[0-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\$")
                 CoroutineScope(Dispatchers.IO).launch {
                     if (!regex.matches(adbUri)) {
-                        toast.toastFailure("Illegal adb uri")
-                        throw RuntimeException("Illegal adb uri")
+                        throw RuntimeException("Illegal adb uri").apply { toast.toastFailure(message.toString()) }
                     }
                     onAdbUriSave(readConfig().copy(adbUri = adbUri))
                 }
             }) {
-            Text("Save")
+            Text(stringResource(Res.string.save))
         }
         Button(
             modifier = modifier,
             onClick = {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        if (!regex.matches(adbUri)) throw RuntimeException("Illegal adb uri")
                         CommandUtil.cmdTask(adbToolPath, "connect", adbUri)?.also {
                             if (it.startsWith("cannot")) {
                                 throw RuntimeException("Connecting failed, Please check emulator state!")
@@ -180,9 +189,8 @@ fun ConnectEmulatorButton(
                         onCommandUpdate(e.message.toString().also { toast.toastFailure(it) })
                     }
                 }
-
             }) {
-            Text("Connect Emulator")
+            Text(stringResource(Res.string.connect_emulator))
         }
     }
 }
@@ -207,7 +215,7 @@ fun CustomButtons(
         Button(
             onClick = { showEmulatorDialog = true }, modifier = Modifier.size(100.dp),
         ) {
-            Text("Open Emulator")
+            Text(stringResource(Res.string.open_emulator))
             if (showEmulatorDialog) {
                 if (config.emulatorPath.isNotEmpty()) {
                     showEmulatorDialog = false
@@ -232,7 +240,7 @@ fun CustomButtons(
             }
         }
         Button(onClick = { showScriptDialog = true }, modifier = Modifier.size(100.dp)) {
-            Text(text = "Select Script", modifier = Modifier.align(Alignment.CenterVertically))
+            Text(text = stringResource(Res.string.select_script), modifier = Modifier.align(Alignment.CenterVertically))
             if (showScriptDialog) {
                 FileDialog(
                     onCloseRequest = {
@@ -254,14 +262,14 @@ fun CustomButtons(
             enabled = scriptState,
             modifier = Modifier.size(100.dp)
         ) {
-            Text("Launch Game")
+            Text(stringResource(Res.string.launch_game))
             if (showPackageDialog) {
                 if (config.appPackageName.isNotEmpty()) {
                     showPackageDialog = false
                     launchGame(config, toast, onCommandUpdate)
                 } else {
                     EnterTextDialog(
-                        title = "Enter appPackage name",
+                        title = stringResource(Res.string.type_package),
                         onSave = {
                             showPackageDialog = false
                             it?.let {
@@ -277,7 +285,7 @@ fun CustomButtons(
             onClick = { showCustomDialog = true },
             modifier = Modifier.size(100.dp)
         ) {
-            Text("Custom")
+            Text(stringResource(Res.string.custom))
             if (showCustomDialog) {
                 if (config.customPath.isNotEmpty()) {
                     showCustomDialog = false
@@ -289,10 +297,7 @@ fun CustomButtons(
                             println(it)
                             it?.also {
                                 onConfigChange(config.copy(customPath = it.also {
-                                    launchEmulator(
-                                        it,
-                                        onCommandUpdate
-                                    )
+                                    launchEmulator(it, onCommandUpdate)
                                 }))
                             }
                         }
@@ -335,7 +340,7 @@ fun EnterTextDialog(
                 onClick = { onSave(value) },
                 modifier = Modifier.fillMaxHeight()
             ) {
-                Text("Save")
+                Text(stringResource(Res.string.save))
             }
         }
     }

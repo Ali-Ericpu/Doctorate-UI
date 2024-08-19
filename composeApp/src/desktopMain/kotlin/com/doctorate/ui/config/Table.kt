@@ -14,7 +14,6 @@ import java.io.File
 object Table {
     val CHARACTER_TABLE: Map<String, Map<String, Any>> =
         JsonUtil.transToMap(File("data/excel/character_table.json")) as Map<String, Map<String, Any>>
-    val GAME_DATA_TABLE: Map<String, Any> = JsonUtil.transToMap(File("data/excel/gamedata_const.json"))
     val SKIN_TABLE: Map<String, Any> = JsonUtil.transToMap(File("data/excel/skin_table.json"))
     val FAVOR_TABLE: Map<String, Any> = JsonUtil.transToMap(File("data/excel/favor_table.json"))
 

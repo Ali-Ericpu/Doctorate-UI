@@ -8,8 +8,8 @@ import java.io.File
 
 data class AppConfig(
     val adbUri: String = "127.0.0.1:7555",
-    val serverUri: String = "127.0.0.1",
-    val serverPort: Int = 8443,
+    val serverUri: String = "http://127.0.0.1",
+    val serverPort: String = "8443",
     val appPackageName: String = "",
     val emulatorPath: String = "",
     val customPath: String = "",
@@ -52,20 +52,31 @@ fun AppConfig(onConfigChange: OnConfigChange? = null, App: @Composable () -> Uni
 }
 
 fun readConfig(): AppConfig {
+    if (GlobalConfig.config != null) return GlobalConfig.config!!
     val configFile = File("config/uiConfig.json")
     return if (configFile.exists()) {
         JsonUtil.fromJson(configFile, AppConfig::class.java)
     } else {
-        AppConfig().also { JsonUtil.writeJson(it, configFile) }
+        AppConfig().also { writeConfig(it, onSuccess = {}, onFailure = {}) }
     }
 }
 
 fun writeConfig(newConfig: AppConfig, onSuccess: () -> Unit, onFailure: (String) -> Unit) {
     try {
+        GlobalConfig.config = newConfig
         JsonUtil.writeJson(newConfig, File("config/uiConfig.json"))
         onSuccess()
     } catch (e: Exception) {
         e.printStackTrace()
         onFailure(e.localizedMessage)
+    }
+}
+
+object GlobalConfig {
+    var config: AppConfig? = null
+        get() = field.also { println("Load Config") }
+
+    init {
+        config = readConfig()
     }
 }

@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.jetbrainsCompose)
     alias(libs.plugins.compose.compiler)
+    kotlin("plugin.serialization") version "2.0.0"
 }
 
 kotlin {
@@ -23,9 +24,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation("org.jetbrains.androidx.navigation:navigation-compose:2.7.0-alpha07")
             implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.5.1")
-            implementation("com.formdev:flatlaf:3.5.1")
             implementation("com.squareup.retrofit2:retrofit:2.11.0")
-            implementation("com.squareup.retrofit2:converter-gson:2.11.0")
             implementation("com.squareup.okhttp3:okhttp:4.12.0")
             implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
             implementation("io.github.qdsfdhvh:image-loader:1.8.2")
@@ -35,6 +34,8 @@ kotlin {
             implementation("io.github.qdsfdhvh:image-loader-extension-moko-resources:1.8.2")
             implementation("com.squareup.okio:okio:3.9.0")
             implementation("ognl:ognl:3.4.3")
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:+")
+            implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:+")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
