@@ -55,7 +55,7 @@ fun readConfig(): AppConfig {
     if (GlobalConfig.config != null) return GlobalConfig.config!!
     val configFile = File("config/uiConfig.json")
     return if (configFile.exists()) {
-        JsonUtil.fromJson(configFile, AppConfig::class.java)
+        JsonUtil.fromJson<AppConfig>(configFile)
     } else {
         AppConfig().also { writeConfig(it, onSuccess = {}, onFailure = {}) }
     }
@@ -64,7 +64,7 @@ fun readConfig(): AppConfig {
 fun writeConfig(newConfig: AppConfig, onSuccess: () -> Unit, onFailure: (String) -> Unit) {
     try {
         GlobalConfig.config = newConfig
-        JsonUtil.writeJson(newConfig, File("config/uiConfig.json"))
+        JsonUtil.writeToFile(newConfig, File("config/uiConfig.json"))
         onSuccess()
     } catch (e: Exception) {
         e.printStackTrace()

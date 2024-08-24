@@ -405,13 +405,16 @@ fun CharacterCard(
                 modifier = Modifier.fillMaxSize()
             )
             //char skin
-            val portrait = File("data/portrait/${Table.getSkinPortraitId(char.skin)}.png").absolutePath
-            Image(
-                painter = rememberImagePainter(ImageRequest(data = portrait.toPath())),
-                contentScale = ContentScale.Crop,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize()
-            )
+            val portraitFile = File("data/portrait/${Table.getSkinPortraitId(char.skin)}.png")
+            if (portraitFile.exists()) {
+                val portrait = portraitFile.absolutePath
+                Image(
+                    painter = rememberImagePainter(ImageRequest(data = portrait.toPath())),
+                    contentScale = ContentScale.Crop,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
             //rarity light
             Image(
                 painter = painterResource(rarityLightPainter),

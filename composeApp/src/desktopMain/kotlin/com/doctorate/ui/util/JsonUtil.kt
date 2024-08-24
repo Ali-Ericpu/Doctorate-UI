@@ -1,6 +1,10 @@
 package com.doctorate.ui.util
 
-import com.google.gson.GsonBuilder
+import com.fasterxml.jackson.core.util.DefaultIndenter
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
+import com.fasterxml.jackson.module.kotlin.convertValue
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import ognl.Ognl
 import java.io.File
 
@@ -14,42 +18,48 @@ import java.io.File
  */
 object JsonUtil {
 
-    private val gson = GsonBuilder().setPrettyPrinting().serializeNulls().create()
+    val mapper = jacksonObjectMapper()
     private val factory = Thread.ofVirtual().factory()
 
-    fun toJson(obj: Any): String {
-        return gson.toJson(obj)
-    }
-
-    fun <T> fromJson(file: File, clazz: Class<T>): T {
-        return gson.fromJson(file.readText(Charsets.UTF_8), clazz)
+    init {
+        mapper.setDefaultPrettyPrinter(object : DefaultPrettyPrinter() {
+            override fun createInstance(): DefaultPrettyPrinter? {
+                this._arrayIndenter = DefaultIndenter()
+                this._objectFieldValueSeparatorWithSpaces = _separators.objectFieldValueSeparator + " "
+                this._arrayEmptySeparator = ""
+                this._objectEmptySeparator = ""
+                return this
+            }
+        })
     }
 
     fun transToMap(file: File): Map<String, Any> {
-        return gson.fromJson(file.readText(Charsets.UTF_8), Map::class.java) as Map<String, Any>
+        return mapper.readValue<Map<String, Any>>(file)
+    }
+
+    fun transToMap(json: String): Map<String, Any> {
+        return mapper.readValue<Map<String, Any>>(json)
     }
 
     /**
      * @return Any 需要手动强转类型
      */
-    fun getValue(map: Map<*, *>, path: String): Any? {
-        return Ognl.getValue(path, map)
-    }
+    fun getValue(map: Map<*, *>, path: String): Any? = Ognl.getValue(path, map)
 
-    fun <T> fromJson(json: String, clazz: Class<T>): T {
-        return gson.fromJson(json, clazz)
-    }
+    inline fun <reified T> fromJson(file: File): T = mapper.readValue<T>(file)
 
-    fun fromJson(json: String): Map<String, Any> {
-        return gson.fromJson(json, Map::class.java) as Map<String, Any>
-    }
+    inline fun <reified T> fromJson(json: String): T = mapper.readValue<T>(json)
 
-    fun writeJson(json: String, file: File) {
+    inline fun <reified T> fromMap(map: Map<String, Any>): T = mapper.convertValue<T>(map)
+
+    fun toJson(any: Any): String = mapper.writeValueAsString(any)
+
+    fun toPrettyJson(any: Any): String = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(any)
+
+    fun writeToFile(any: Any, file: File) = writeToFile(toPrettyJson(any), file)
+
+    fun writeToFile(json: String, file: File) {
         factory.newThread { file.parentFile.mkdirs().also { file.writeText(json) } }.start()
-    }
-
-    fun writeJson(any: Any, file: File) {
-        writeJson(gson.toJson(any), file)
     }
 
 }

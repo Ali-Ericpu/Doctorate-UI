@@ -49,6 +49,7 @@ data class Char(
             this.starMark != other.starMark -> other.starMark.compareTo(starMark)
             this.evolvePhase != other.evolvePhase -> other.evolvePhase.compareTo(evolvePhase)
             this.rarity != other.rarity -> other.rarity!!.compareTo(rarity!!)
+            this.profession != other.profession -> other.profession!!.compareTo(profession!!)
             this.level != other.level -> other.level.compareTo(level)
             else -> 0
         }

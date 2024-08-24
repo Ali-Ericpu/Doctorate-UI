@@ -36,12 +36,11 @@ kotlin {
             implementation("ognl:ognl:3.4.3")
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:+")
             implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:+")
+            implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.+")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
-            implementation("dev.mobile:dadb:1.2.7")
-            implementation("com.google.code.gson:gson:2.11.0")
             implementation("io.github.qdsfdhvh:image-loader-extension-imageio:1.8.2")
         }
     }
@@ -55,7 +54,7 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "Doctorate UI"
             packageVersion = "1.0.0"
-            windows{
+            windows {
                 iconFile.set(file("data/icon.ico"))
             }
         }

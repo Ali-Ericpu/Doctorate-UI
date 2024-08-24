@@ -149,7 +149,7 @@ fun EditValueRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(color = Color.LightGray)
-            .padding(8.dp)
+            .padding(16.dp)
             .height(56.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -158,7 +158,7 @@ fun EditValueRow(
             singleLine = true,
             value = value,
             onValueChange = { value = it },
-            leadingIcon = { Text(text = leading, color = Color.Black, modifier = Modifier.padding(start = 8.dp)) },
+            leadingIcon = { Text(text = leading, color = Color.Black, modifier = Modifier.padding(start = 16.dp)) },
             colors = TextFieldDefaults.outlinedTextFieldColors(
                 textColor = Color.Black,
                 backgroundColor = Color.LightGray,

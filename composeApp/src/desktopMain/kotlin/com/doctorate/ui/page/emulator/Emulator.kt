@@ -148,7 +148,7 @@ fun ConnectEmulatorButton(
             onClick = {
                 CoroutineScope(Dispatchers.IO).launch {
                     if (!regex.matches(adbUri)) {
-                        throw RuntimeException("Illegal adb uri").apply { toast.toastFailure(message.toString()) }
+                        throw RuntimeException("Illegal adb uri").apply { toast.toastFailure(message!!) }
                     }
                     onAdbUriSave(readConfig().copy(adbUri = adbUri))
                 }
