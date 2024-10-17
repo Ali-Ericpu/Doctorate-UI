@@ -49,6 +49,7 @@ import com.seiko.imageloader.model.ImageRequest
 import com.seiko.imageloader.rememberImagePainter
 import doctorateui.composeapp.generated.resources.Res
 import doctorateui.composeapp.generated.resources.cancel
+import doctorateui.composeapp.generated.resources.character_default_skill_icon
 import doctorateui.composeapp.generated.resources.character_locked_skill
 import doctorateui.composeapp.generated.resources.character_skill_selected
 import doctorateui.composeapp.generated.resources.character_special_skill_0
@@ -62,10 +63,10 @@ import doctorateui.composeapp.generated.resources.potential
 import doctorateui.composeapp.generated.resources.save
 import doctorateui.composeapp.generated.resources.skill_level
 import doctorateui.composeapp.generated.resources.star_mark
-import okio.Path.Companion.toPath
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import java.io.File
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -281,9 +282,15 @@ fun SkillDetail(
             val skillPainter = if (skill.unlock == 0) {
                 painterResource(Res.drawable.character_locked_skill)
             } else {
-                val skillIcon = File("data/skill/skill_icon_${skill.skillId}.png").absolutePath
-                rememberImagePainter(ImageRequest(data = skillIcon.toPath()))
+                val skillId = URLEncoder.encode(skill.skillId, StandardCharsets.UTF_8)
+                val link = "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/refs/heads/main/skill/skill_icon_$skillId.png"
+                rememberImagePainter(ImageRequest(data = link))
             }
+            Image(
+                painter = painterResource(Res.drawable.character_default_skill_icon),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize()
+            )
             Image(
                 painter = skillPainter, contentDescription = null, modifier = Modifier.fillMaxSize().border(
                     width = 4.dp,

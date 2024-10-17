@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,7 +75,14 @@ import com.doctorate.ui.config.LocalAppConfig
 import com.doctorate.ui.config.Table
 import com.doctorate.ui.entity.Char
 import com.doctorate.ui.entity.Profession
+import com.doctorate.ui.network.datasource.CharacterDataSource
 import com.doctorate.ui.view.LocalAppToaster
+import com.seiko.imageloader.ImageLoader
+import com.seiko.imageloader.LocalImageLoader
+import com.seiko.imageloader.component.setupDefaultComponents
+import com.seiko.imageloader.intercept.bitmapMemoryCacheConfig
+import com.seiko.imageloader.intercept.imageMemoryCacheConfig
+import com.seiko.imageloader.intercept.painterMemoryCacheConfig
 import com.seiko.imageloader.model.ImageRequest
 import com.seiko.imageloader.rememberImagePainter
 import doctorateui.composeapp.generated.resources.Res
@@ -142,10 +150,13 @@ import doctorateui.composeapp.generated.resources.server_uri
 import doctorateui.composeapp.generated.resources.setting
 import doctorateui.composeapp.generated.resources.uid
 import kotlinx.coroutines.launch
+import okio.Path.Companion.toOkioPath
 import okio.Path.Companion.toPath
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import java.io.File
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import kotlin.math.roundToInt
 
 /**
@@ -175,14 +186,18 @@ fun Character(
     val professionOffsetX by animateFloatAsState(if (selectProfession) 0f else 1.2f)
     val menuOffsetX by animateFloatAsState(if (!selectProfession) 0f else 1.5f)
     Box(modifier = Modifier.fillMaxSize()) {
-        LazyVerticalGrid(GridCells.FixedSize(138.dp)) {
-            items(charList) {
-                CharacterCard(it) {
-                    coroutineScope.launch {
-                        try {
-                            viewModel.changeCharData(it, config.adminKey, config.uid)
-                        } catch (e: Exception) {
-                            toaster.toastFailure(e.message.toString())
+        CompositionLocalProvider(
+            LocalImageLoader provides remember { generateImageLoader() },
+        ) {
+            LazyVerticalGrid(GridCells.FixedSize(138.dp)) {
+                items(charList) {
+                    CharacterCard(it) {
+                        coroutineScope.launch {
+                            try {
+                                viewModel.changeCharData(it, config.adminKey, config.uid)
+                            } catch (e: Exception) {
+                                toaster.toastFailure(e.message.toString())
+                            }
                         }
                     }
                 }
@@ -313,17 +328,17 @@ fun Character(
             config = config,
             onValueSave = {
                 viewModel.changeEditState()
-                it?.let { onConfigChange(it) }
+                it?.let {
+                    onConfigChange(it)
+                    CharacterDataSource.reset()
+                }
             }
         )
     }
 }
 
 @Composable
-fun CharacterCard(
-    char: Char,
-    onCharChange: (char: Char) -> Unit
-) {
+fun CharacterCard(char: Char, onCharChange: (char: Char) -> Unit) {
     var showDetail by remember { mutableStateOf(false) }
 
     val evolvePhasePainter = when (char.evolvePhase) {
@@ -405,16 +420,14 @@ fun CharacterCard(
                 modifier = Modifier.fillMaxSize()
             )
             //char skin
-            val portraitFile = File("data/portrait/${Table.getSkinPortraitId(char.skin)}.png")
-            if (portraitFile.exists()) {
-                val portrait = portraitFile.absolutePath
-                Image(
-                    painter = rememberImagePainter(ImageRequest(data = portrait.toPath())),
-                    contentScale = ContentScale.Crop,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            val portraitId = URLEncoder.encode(Table.getSkinPortraitId(char.skin), StandardCharsets.UTF_8)
+            val link = "https://torappu.prts.wiki/assets/char_portrait/$portraitId.png"
+            Image(
+                painter = rememberImagePainter(ImageRequest(data = link)),
+                contentScale = ContentScale.Crop,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize()
+            )
             //rarity light
             Image(
                 painter = painterResource(rarityLightPainter),
@@ -579,7 +592,7 @@ fun ExtraSettingDialog(config: AppConfig, onValueSave: (AppConfig?) -> Unit) {
         resizable = false,
         title = stringResource(Res.string.setting),
         state = DialogState(
-            size = DpSize(400.dp, 380.dp),
+            size = DpSize(400.dp, 320.dp),
             position = WindowPosition(Alignment.Center)
         )
     ) {
@@ -602,16 +615,6 @@ fun ExtraSettingDialog(config: AppConfig, onValueSave: (AppConfig?) -> Unit) {
                 .padding(8.dp)
                 .background(color = Color.LightGray, shape = RoundedCornerShape(8.dp))
         ) {
-            Text(
-                "If you change Server URI or Port",
-                color = Color.Black,
-                modifier = Modifier.padding(8.dp)
-            )
-            Text(
-                "You need reboot this Program!!!",
-                color = Color.Black,
-                modifier = Modifier.padding(8.dp)
-            )
             Row {
                 OutlinedTextField(
                     value = serverUri,
@@ -681,4 +684,29 @@ fun ExtraSettingDialog(config: AppConfig, onValueSave: (AppConfig?) -> Unit) {
     }
 }
 
+fun generateImageLoader(): ImageLoader {
+    return ImageLoader {
+        components {
+            setupDefaultComponents()
+        }
+        interceptor {
+            // cache 32MB bitmap
+            bitmapMemoryCacheConfig {
+                maxSize(32 * 1024 * 1024) // 32MB
+            }
+            // cache 50 image
+            imageMemoryCacheConfig {
+                maxSize(50)
+            }
+            // cache 50 painter
+            painterMemoryCacheConfig {
+                maxSize(50)
+            }
+            diskCacheConfig {
+                directory(File("data/").toOkioPath().resolve("image_cache"))
+                maxSizeBytes(512L * 1024 * 1024) // 512MB
+            }
+        }
+    }
+}
 

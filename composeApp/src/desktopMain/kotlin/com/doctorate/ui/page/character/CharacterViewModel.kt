@@ -50,11 +50,12 @@ class CharacterViewModel : ViewModel() {
         if (result.status != 0 || result.data == null) throw RuntimeException(result.msg)
         characterData.clear()
         result.data.forEach { instId, char ->
-            val charData = Table.getCharacterData(char.charId)
-            char.name = charData["name"] as String
-            char.profession = charData["profession"] as String
-            char.rarity = (charData["rarity"] as String).substringAfter("_").toInt()
-            characterData[instId] = char
+            runCatching { Table.getCharacterData(char.charId) }.onSuccess {
+                char.name = it["name"] as String
+                char.profession = it["profession"] as String
+                char.rarity = (it["rarity"] as String).substringAfter("_").toInt()
+                characterData[instId] = char
+            }.onFailure { println(it.message!!) }
         }
         selectProfession(_profession.value)
         delay(500)
@@ -69,17 +70,14 @@ class CharacterViewModel : ViewModel() {
             if (profession == "ALL") {
                 characterList.addAll(characterData.values)
             } else {
-                characterData.values.filter { it.profession!! == profession }
-                    .forEach { characterList.add(it) }
+                characterList.addAll(characterData.values.filter { it.profession!! == profession })
             }
         }
     }
 
-    fun changeSelectState(state: Boolean) =
-        CoroutineScope(Dispatchers.Default).launch {
-            _isSelect.emit(state)
-        }
-
+    fun changeSelectState(state: Boolean) = CoroutineScope(Dispatchers.Default).launch {
+        _isSelect.emit(state)
+    }
 
     suspend fun changeCharData(char: Char, adminKey: String, uid: String) = withContext(Dispatchers.IO) {
         val result = CharacterDataSource.saveCharacter(adminKey, SaveCharBody(uid, char.instId, char))

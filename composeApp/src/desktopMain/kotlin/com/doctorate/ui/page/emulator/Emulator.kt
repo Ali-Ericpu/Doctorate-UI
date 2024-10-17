@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -25,10 +26,8 @@ import com.doctorate.ui.config.AppConfig
 import com.doctorate.ui.config.LocalAppConfig
 import com.doctorate.ui.config.readConfig
 import com.doctorate.ui.page.character.CircleIconButton
-import com.doctorate.ui.util.CommandUtil
 import com.doctorate.ui.view.FileDialog
 import com.doctorate.ui.view.LocalAppToaster
-import com.doctorate.ui.view.Toaster
 import doctorateui.composeapp.generated.resources.Res
 import doctorateui.composeapp.generated.resources.adb_uri
 import doctorateui.composeapp.generated.resources.connect_emulator
@@ -44,7 +43,6 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import java.io.File
-import java.io.IOException
 
 /**
  * ClassName: Emulator
@@ -59,22 +57,41 @@ import java.io.IOException
 fun Emulator(
     viewModel: EmulatorViewModel = viewModel { EmulatorViewModel() }
 ) {
+    val toast = LocalAppToaster.current
     val config = LocalAppConfig.current.config
     val onConfigChange = LocalAppConfig.current.onConfigChange
     val commandOutput = viewModel.commandOutput()
+    val coroutineScope = rememberCoroutineScope()
+    val lazyListState = rememberLazyListState()
     var adbUri by rememberSaveable { mutableStateOf(config.adbUri) }
     Surface(color = MaterialTheme.colors.background) {
         Column(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).background(color = Color.LightGray)) {
             ConnectEmulatorButton(
                 adbUri = adbUri,
-                adbToolPath = config.adbToolPath,
-                serverPort = config.serverPort,
-                onCommandUpdate = { viewModel.commandUpdate(it) },
+                connectEmulator = {
+                    coroutineScope.launch {
+                        try {
+                            viewModel.connectEmulator(readConfig())
+                        } catch (e: Exception) {
+                            viewModel.commandUpdate(e.message.toString().also { toast.toastFailure(it) })
+                        }
+                    }
+                },
                 onAdbUriChange = { adbUri = it },
-                onAdbUriSave = { onConfigChange(it) },
+                onAdbUriSave = { onConfigChange(it) }
             )
             CustomButtons(
                 config = config,
+                launchEmulator = { viewModel.launchEmulator(it) },
+                launchGame = {
+                    coroutineScope.launch {
+                        try {
+                            viewModel.launchGame(readConfig())
+                        } catch (e: Exception) {
+                            viewModel.commandUpdate(e.message.toString().also { toast.toastFailure(it) })
+                        }
+                    }
+                },
                 onCommandUpdate = { viewModel.commandUpdate(it) },
                 onConfigChange = onConfigChange
             )
@@ -86,8 +103,18 @@ fun Emulator(
                         .background(color = Color.Black)
                         .padding(8.dp),
                     horizontalAlignment = Alignment.Start,
+                    verticalArrangement = Arrangement.Top,
+                    state = lazyListState,
                 ) {
-                    items(commandOutput) { output -> Text(text = output, color = Color.White) }
+                    items(commandOutput) { output ->
+                        Text(text = output, color = Color.White)
+                        if (commandOutput.size > 10) {
+                            coroutineScope.launch {
+                                lazyListState.animateScrollToItem(commandOutput.size - 1)
+                            }
+                        }
+                    }
+                    item { Text("->", color = MaterialTheme.colors.primary) }
                 }
                 CircleIconButton(
                     icon = Icons.Default.Delete,
@@ -103,11 +130,9 @@ fun Emulator(
 @Composable
 fun ConnectEmulatorButton(
     adbUri: String,
-    adbToolPath: String,
-    serverPort: String,
+    connectEmulator: () -> Unit,
     onAdbUriChange: (String) -> Unit,
     onAdbUriSave: (AppConfig) -> Unit,
-    onCommandUpdate: (String) -> Unit,
 ) {
     val toast = LocalAppToaster.current
     val regex =
@@ -140,57 +165,34 @@ fun ConnectEmulatorButton(
                 unfocusedBorderColor = MaterialTheme.colors.onSurface,
                 focusedBorderColor = Color.Black,
             ),
-            modifier = Modifier.width(460.dp)
+            modifier = Modifier.weight(7f)
         )
-        val modifier = Modifier.fillMaxHeight().width(100.dp)
-        Button(
-            modifier = modifier,
-            onClick = {
-                CoroutineScope(Dispatchers.IO).launch {
-                    if (!regex.matches(adbUri)) {
-                        throw RuntimeException("Illegal adb uri").apply { toast.toastFailure(message!!) }
-                    }
-                    onAdbUriSave(readConfig().copy(adbUri = adbUri))
-                }
-            }) {
-            Text(stringResource(Res.string.save))
-        }
-        Button(
-            modifier = modifier,
-            onClick = {
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        if (!regex.matches(adbUri)) throw RuntimeException("Illegal adb uri")
-                        CommandUtil.cmdTask(adbToolPath, "connect", adbUri)?.also {
-                            if (it.startsWith("cannot")) {
-                                throw RuntimeException("Connecting failed, Please check emulator state!")
-                            }
-                            onCommandUpdate(it)
+        Spacer(modifier = Modifier.weight(1f))
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.weight(3f)
+        ) {
+            val modifier = Modifier.fillMaxHeight().width(100.dp)
+            Button(
+                modifier = modifier,
+                enabled = regex.matches(adbUri),
+                onClick = {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        if (!regex.matches(adbUri)) {
+                            throw RuntimeException("Illegal adb uri").apply { toast.toastFailure(message!!) }
                         }
-                        CommandUtil.cmdTask(adbToolPath, "start-server")
-                        CommandUtil.cmdTask(adbToolPath, "wait-for-server")
-                        CommandUtil.cmdTask(adbToolPath, "root")
-                        CommandUtil.cmdTask(adbToolPath, "reverse", "tcp:$serverPort", "tcp:$serverPort")
-                        onCommandUpdate("Python Version : ${CommandUtil.cmdTask("python", "--version")}")
-                        onCommandUpdate("Frida Version : ${CommandUtil.cmdTask("frida", "--v")}")
-                        try {
-                            onCommandUpdate("running frida-server")
-                            CommandUtil.cmdAsyncTask(
-                                adbToolPath,
-                                "shell",
-                                "/data/local/tmp/frida-server",
-                                "&",
-                                onCommandUpdate = onCommandUpdate
-                            )
-                        } catch (_: IOException) {
-                            throw RuntimeException("Frida server on emulator not exists")
-                        }
-                    } catch (e: Exception) {
-                        onCommandUpdate(e.message.toString().also { toast.toastFailure(it) })
+                        onAdbUriSave(readConfig().copy(adbUri = adbUri))
                     }
-                }
-            }) {
-            Text(stringResource(Res.string.connect_emulator))
+                }) {
+                Text(stringResource(Res.string.save))
+            }
+            Button(
+                modifier = modifier,
+                enabled = regex.matches(adbUri),
+                onClick = connectEmulator
+            ) {
+                Text(stringResource(Res.string.connect_emulator))
+            }
         }
     }
 }
@@ -198,10 +200,11 @@ fun ConnectEmulatorButton(
 @Composable
 fun CustomButtons(
     config: AppConfig,
+    launchEmulator: (String) -> Unit,
+    launchGame: () -> Unit,
     onCommandUpdate: (String) -> Unit,
     onConfigChange: (AppConfig) -> Unit,
 ) {
-    val toast = LocalAppToaster.current
     var showEmulatorDialog by remember { mutableStateOf(false) }
     var showScriptDialog by remember { mutableStateOf(false) }
     var showPackageDialog by remember { mutableStateOf(false) }
@@ -219,7 +222,7 @@ fun CustomButtons(
             if (showEmulatorDialog) {
                 if (config.emulatorPath.isNotEmpty()) {
                     showEmulatorDialog = false
-                    launchEmulator(config.emulatorPath, onCommandUpdate)
+                    launchEmulator(config.emulatorPath)
                 } else {
                     FileDialog(
                         onCloseRequest = {
@@ -228,7 +231,6 @@ fun CustomButtons(
                                 if (it.endsWith(".exe")) {
                                     launchEmulator(
                                         it.also { onConfigChange(config.copy(emulatorPath = it)) },
-                                        onCommandUpdate
                                     )
                                 } else {
                                     onCommandUpdate("Error file,Please try again")
@@ -266,7 +268,7 @@ fun CustomButtons(
             if (showPackageDialog) {
                 if (config.appPackageName.isNotEmpty()) {
                     showPackageDialog = false
-                    launchGame(config, toast, onCommandUpdate)
+                    launchGame()
                 } else {
                     EnterTextDialog(
                         title = stringResource(Res.string.type_package),
@@ -274,7 +276,7 @@ fun CustomButtons(
                             showPackageDialog = false
                             it?.let {
                                 config.copy(appPackageName = it).also { onConfigChange(it) }
-                                    .also { launchGame(it, toast, onCommandUpdate) }
+                                launchGame()
                             }
                         }
                     )
@@ -289,16 +291,14 @@ fun CustomButtons(
             if (showCustomDialog) {
                 if (config.customPath.isNotEmpty()) {
                     showCustomDialog = false
-                    launchEmulator(config.customPath, onCommandUpdate)
+                    launchEmulator(config.customPath)
                 } else {
                     FileDialog(
                         onCloseRequest = {
                             showCustomDialog = false
                             println(it)
                             it?.also {
-                                onConfigChange(config.copy(customPath = it.also {
-                                    launchEmulator(it, onCommandUpdate)
-                                }))
+                                onConfigChange(config.copy(customPath = it.also { launchEmulator(it) }))
                             }
                         }
                     )
@@ -346,25 +346,6 @@ fun EnterTextDialog(
     }
 }
 
-fun launchEmulator(emulatorPath: String, onCommandUpdate: (String) -> Unit) =
-    CoroutineScope(Dispatchers.IO).launch {
-        CommandUtil.cmdAsyncTask(emulatorPath, onCommandUpdate = onCommandUpdate)
-    }
 
-fun launchGame(config: AppConfig, toast: Toaster, onCommandUpdate: (String) -> Unit) =
-    CoroutineScope(Dispatchers.IO).launch {
-        try {
-            CommandUtil.cmdAsyncTask(
-                "frida",
-                "-U",
-                "-f",
-                config.appPackageName,
-                "-l",
-                config.scriptPath,
-                onCommandUpdate = onCommandUpdate
-            )
-        } catch (_: IOException) {
-            onCommandUpdate("Can't find Frida")
-            toast.toastFailure("Can't find Frida")
-        }
-    }
+
+

@@ -17,7 +17,7 @@ object Table {
     val FAVOR_TABLE = JsonUtil.transToMap(File("data/excel/favor_table.json"))
 
     fun getCharacterData(charId: String): Map<String, Any> {
-        return CHARACTER_TABLE[charId] ?: throw RuntimeException("char data not found $charId")
+        return CHARACTER_TABLE[charId] ?: throw RuntimeException("$charId is not exists")
     }
 
     fun getSkinPortraitId(skinId: String): String? {
