@@ -8,6 +8,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 /**
  * ClassName: EmulatorViewModel
@@ -20,7 +22,10 @@ import kotlinx.coroutines.withContext
 class EmulatorViewModel : ViewModel() {
     private val commandOutput = mutableStateListOf<String>()
 
-    fun commandUpdate(command: String) = commandOutput.add(command)
+    fun commandUpdate(command: String) {
+        val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
+        commandOutput.add("$time  $command")
+    }
 
     fun commandOutput() = commandOutput.toList()
 

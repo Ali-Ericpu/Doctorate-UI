@@ -53,7 +53,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "Doctorate UI"
-            packageVersion = "1.0.0"
+            packageVersion = "1.2.0"
             windows {
                 iconFile.set(file("data/icon.ico"))
             }

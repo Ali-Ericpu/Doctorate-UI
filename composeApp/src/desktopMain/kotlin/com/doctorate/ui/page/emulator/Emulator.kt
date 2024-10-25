@@ -101,7 +101,7 @@ fun Emulator(
                         .padding(8.dp)
                         .clip(shape = RoundedCornerShape(10.dp))
                         .background(color = Color.Black)
-                        .padding(8.dp),
+                        .padding(16.dp),
                     horizontalAlignment = Alignment.Start,
                     verticalArrangement = Arrangement.Top,
                     state = lazyListState,
