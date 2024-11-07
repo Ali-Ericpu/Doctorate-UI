@@ -1,6 +1,8 @@
 package com.doctorate.ui.config
 
 import com.doctorate.ui.util.JsonUtil
+import com.doctorate.ui.util.get
+import com.doctorate.ui.util.getValue
 import java.io.File
 
 /**
@@ -12,7 +14,7 @@ import java.io.File
  * @Version 1.0
  */
 object Table {
-    val CHARACTER_TABLE = JsonUtil.transToMap(File("data/excel/character_table.json")) as Map<String, Map<String, Any>>
+    val CHARACTER_TABLE = JsonUtil.fromJson<Map<String, Map<String, Any>>>(File("data/excel/character_table.json"))
     val SKIN_TABLE = JsonUtil.transToMap(File("data/excel/skin_table.json"))
     val FAVOR_TABLE = JsonUtil.transToMap(File("data/excel/favor_table.json"))
 
@@ -21,29 +23,29 @@ object Table {
     }
 
     fun getSkinPortraitId(skinId: String): String? {
-        return JsonUtil.getValue(SKIN_TABLE, "charSkins[\"${skinId}\"].portraitId") as? String
+        return SKIN_TABLE.getValue<String>("charSkins[\"${skinId}\"].portraitId")
     }
 
     fun getMaxCharEvoLevel(charId: String): Int {
-        return (getCharacterData(charId)["phases"] as List<Any>).size - 1
+        return getCharacterData(charId).get<List<Map<String, Any>>>("phases")!!.size - 1
     }
 
     fun getMaxCharLevel(charId: String, evoPhase: Int): Int {
-        val phases = getCharacterData(charId)["phases"] as List<Map<String, Any>>
+        val phases = getCharacterData(charId).get<List<Map<String, Any>>>("phases")!!
         val phase = phases.getOrNull(evoPhase) ?: phases.first()
         return phase["maxLevel"] as Int
     }
 
     fun getRealFavPoint(percent: Int): Int {
-        val favorFrames = FAVOR_TABLE["favorFrames"] as List<Map<String, Any>>
+        val favorFrames = FAVOR_TABLE.get<List<Map<String, Any>>>("favorFrames")!!
         return favorFrames[percent]["level"] as Int
     }
 
     fun getFavPointPercent(favPoint: Int): Int {
-        val favorFrames = FAVOR_TABLE["favorFrames"] as List<Map<String, Any>>
+        val favorFrames = FAVOR_TABLE.get<List<Map<String, Any>>>("favorFrames")!!
         favorFrames.forEach {
             if (it["level"] as Int >= favPoint) {
-                return JsonUtil.getValue(it, "data.percent") as Int
+                return it.getValue<Int>("data.percent")!!
             }
         }
         return 0

@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogState
@@ -26,6 +27,7 @@ import com.doctorate.ui.config.AppConfig
 import com.doctorate.ui.config.LocalAppConfig
 import com.doctorate.ui.config.readConfig
 import com.doctorate.ui.page.character.CircleIconButton
+import com.doctorate.ui.util.log
 import com.doctorate.ui.view.FileDialog
 import com.doctorate.ui.view.LocalAppToaster
 import doctorateui.composeapp.generated.resources.Res
@@ -107,10 +109,10 @@ fun Emulator(
                     state = lazyListState,
                 ) {
                     items(commandOutput) { output ->
-                        Text(text = output, color = Color.White)
+                        Text(text = output, color = Color.LightGray, fontWeight = FontWeight.Bold)
                         if (commandOutput.size > 10) {
                             coroutineScope.launch {
-                                lazyListState.animateScrollToItem(commandOutput.size - 1)
+                                lazyListState.animateScrollToItem(commandOutput.lastIndex)
                             }
                         }
                     }
@@ -296,7 +298,7 @@ fun CustomButtons(
                     FileDialog(
                         onCloseRequest = {
                             showCustomDialog = false
-                            println(it)
+                            log().info(it)
                             it?.also {
                                 onConfigChange(config.copy(customPath = it.also { launchEmulator(it) }))
                             }

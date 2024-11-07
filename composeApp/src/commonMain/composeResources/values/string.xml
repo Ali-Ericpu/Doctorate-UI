@@ -17,9 +17,11 @@
     <string name="level">Level</string>
     <string name="fav_pt">FavorPoint</string>
     <string name="type_package">Type app packageName</string>
-    <string name="elite_phase">EvolvePhase</string>
+    <string name="elite_phase">Evolve Phase</string>
     <string name="potential">Potential</string>
     <string name="skill_level">Skill Level</string>
+    <string name="specialize_level">Specialize Level</string>
+    <string name="equip_level">Equip Level</string>
     <string name="star_mark">Star Mark</string>
     <string name="adb_uri">ADB URI : </string>
     <string name="app_pack_name">APP Package Name : </string>
@@ -32,4 +34,8 @@
     <string name="port">Port</string>
     <string name="uid">UID</string>
     <string name="admin_key">Admin Key</string>
+    <string name="charId">Char ID</string>
+    <string name="itemId">Item ID</string>
+    <string name="item_type">Item Type</string>
+    <string name="count">Count</string>
 </resources>

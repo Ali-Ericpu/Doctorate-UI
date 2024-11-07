@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Button
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
@@ -39,10 +40,12 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
@@ -74,9 +77,13 @@ import com.doctorate.ui.config.AppConfig
 import com.doctorate.ui.config.LocalAppConfig
 import com.doctorate.ui.config.Table
 import com.doctorate.ui.entity.Char
+import com.doctorate.ui.entity.Item
 import com.doctorate.ui.entity.Profession
 import com.doctorate.ui.network.datasource.CharacterDataSource
+import com.doctorate.ui.page.setting.EditSwitch
+import com.doctorate.ui.req.UnlockAllCharReq
 import com.doctorate.ui.view.LocalAppToaster
+import com.doctorate.ui.view.Toaster
 import com.seiko.imageloader.ImageLoader
 import com.seiko.imageloader.LocalImageLoader
 import com.seiko.imageloader.component.setupDefaultComponents
@@ -88,6 +95,7 @@ import com.seiko.imageloader.rememberImagePainter
 import doctorateui.composeapp.generated.resources.Res
 import doctorateui.composeapp.generated.resources.admin_key
 import doctorateui.composeapp.generated.resources.cancel
+import doctorateui.composeapp.generated.resources.charId
 import doctorateui.composeapp.generated.resources.character_charbg_1
 import doctorateui.composeapp.generated.resources.character_charbg_2
 import doctorateui.composeapp.generated.resources.character_charbg_3
@@ -132,7 +140,11 @@ import doctorateui.composeapp.generated.resources.character_upperhub_4
 import doctorateui.composeapp.generated.resources.character_upperhub_5
 import doctorateui.composeapp.generated.resources.character_upperhub_6
 import doctorateui.composeapp.generated.resources.character_upperhub_shadow
+import doctorateui.composeapp.generated.resources.count
+import doctorateui.composeapp.generated.resources.elite_phase
 import doctorateui.composeapp.generated.resources.equip_bg
+import doctorateui.composeapp.generated.resources.equip_level
+import doctorateui.composeapp.generated.resources.fav_pt
 import doctorateui.composeapp.generated.resources.icon
 import doctorateui.composeapp.generated.resources.icon_profession_caster
 import doctorateui.composeapp.generated.resources.icon_profession_medic
@@ -142,22 +154,31 @@ import doctorateui.composeapp.generated.resources.icon_profession_special
 import doctorateui.composeapp.generated.resources.icon_profession_support
 import doctorateui.composeapp.generated.resources.icon_profession_tank
 import doctorateui.composeapp.generated.resources.icon_profession_warrior
+import doctorateui.composeapp.generated.resources.itemId
+import doctorateui.composeapp.generated.resources.item_type
+import doctorateui.composeapp.generated.resources.level
 import doctorateui.composeapp.generated.resources.lv
 import doctorateui.composeapp.generated.resources.port
+import doctorateui.composeapp.generated.resources.potential
 import doctorateui.composeapp.generated.resources.profession_select
 import doctorateui.composeapp.generated.resources.save
 import doctorateui.composeapp.generated.resources.server_uri
 import doctorateui.composeapp.generated.resources.setting
+import doctorateui.composeapp.generated.resources.skill_level
+import doctorateui.composeapp.generated.resources.specialize_level
 import doctorateui.composeapp.generated.resources.uid
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okio.Path.Companion.toOkioPath
-import okio.Path.Companion.toPath
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import kotlin.math.roundToInt
+import kotlin.text.startsWith
 
 /**
  * ClassName: Character
@@ -179,17 +200,20 @@ fun Character(
     val selectProfession by viewModel.isSelect.collectAsState()
     val showLoadAnimate by viewModel.loadAnimate.collectAsState()
     val splash by viewModel.splash.collectAsState()
-    val isEditConfig by viewModel.isEditConfig.collectAsState()
+    val isSetting by viewModel.isSetting.collectAsState()
+    val isGainChar by viewModel.gainChar.collectAsState()
+    val isExtension by viewModel.extension.collectAsState()
     val charList = viewModel.syncCharList()
     val coroutineScope = rememberCoroutineScope()
     val professions = Profession.entries.toList()
     val professionOffsetX by animateFloatAsState(if (selectProfession) 0f else 1.2f)
     val menuOffsetX by animateFloatAsState(if (!selectProfession) 0f else 1.5f)
+    var extensionStatus by remember { mutableStateOf(0) }
     Box(modifier = Modifier.fillMaxSize()) {
         CompositionLocalProvider(
             LocalImageLoader provides remember { generateImageLoader() },
         ) {
-            LazyVerticalGrid(GridCells.FixedSize(138.dp)) {
+            LazyVerticalGrid(GridCells.Adaptive(minSize = 138.dp)) {
                 items(charList) {
                     CharacterCard(it) {
                         coroutineScope.launch {
@@ -259,9 +283,16 @@ fun Character(
                     )
                     CircleIconButton(
                         icon = Icons.Default.Settings,
-                        onclick = { viewModel.changeEditState() }
+                        onclick = { viewModel.changeSettingState() }
                     )
-                    Icons.Default.Menu
+                    CircleIconButton(
+                        icon = Icons.Default.Add,
+                        onclick = { viewModel.changeGainCharState() }
+                    )
+                    CircleIconButton(
+                        icon = Icons.Default.Star,
+                        onclick = { viewModel.changeExtensionState() }
+                    )
                     CircleIconButton(
                         icon = Icons.Default.Refresh,
                         onclick = {
@@ -323,11 +354,11 @@ fun Character(
             }
         }
     }
-    if (isEditConfig) {
+    if (isSetting) {
         ExtraSettingDialog(
             config = config,
             onValueSave = {
-                viewModel.changeEditState()
+                viewModel.changeSettingState()
                 it?.let {
                     onConfigChange(it)
                     CharacterDataSource.reset()
@@ -335,12 +366,63 @@ fun Character(
             }
         )
     }
+    if (isGainChar) {
+        GainCharDialog {
+            viewModel.changeGainCharState()
+            it?.let {
+                coroutineScope.launch {
+                    runCatching { viewModel.gainItem(config.adminKey, config.uid, it) }.onSuccess {
+                        toaster.toast("Success")
+                    }.onFailure {
+                        toaster.toastFailure(it.message!!)
+                    }
+                }
+            }
+        }
+    }
+    if (isExtension) {
+        ExtensionDialog(
+            extensionStatus = extensionStatus,
+            onClose = { viewModel.changeExtensionState() },
+            unlockAllFlags = {
+                coroutineScope.doRequest(toaster, changeStatus = { extensionStatus = it }) {
+                    viewModel.unlockAllFlags(config.adminKey, config.uid)
+                }
+            },
+            unlockAllStages = {
+                coroutineScope.doRequest(toaster, changeStatus = { extensionStatus = it }) {
+                    viewModel.unlockAllStages(config.adminKey, config.uid)
+                }
+            },
+            unlockAllChar = {
+                coroutineScope.doRequest(toaster, changeStatus = { extensionStatus = it }) {
+                    viewModel.unlockAllChar(config.adminKey, config.uid, it)
+                }
+            },
+            gainItem = {
+                coroutineScope.doRequest(toaster, changeStatus = { extensionStatus = it }) {
+                    viewModel.gainItem(config.adminKey, config.uid, it)
+                }
+            }
+        )
+    }
 }
+
+private fun CoroutineScope.doRequest(toaster: Toaster, changeStatus: (Int) -> Unit, block: suspend () -> Unit) =
+    launch(Dispatchers.IO) {
+        runCatching { block() }.onSuccess {
+            changeStatus(1)
+        }.onFailure {
+            changeStatus(2)
+            toaster.toastFailure(it.message!!)
+        }
+        delay(2000)
+        changeStatus(0)
+    }
 
 @Composable
 fun CharacterCard(char: Char, onCharChange: (char: Char) -> Unit) {
     var showDetail by remember { mutableStateOf(false) }
-
     val evolvePhasePainter = when (char.evolvePhase) {
         0 -> Res.drawable.character_elite_0
         1 -> Res.drawable.character_elite_1
@@ -363,7 +445,7 @@ fun CharacterCard(char: Char, onCharChange: (char: Char) -> Unit) {
         "SUPPORT" -> Res.drawable.icon_profession_support
         else -> throw IllegalArgumentException("unknown character profession :${char.profession}")
     }
-    when (char.rarity!!) {
+    when (char.rank!!) {
         2 -> {
             rarityPainter = Res.drawable.character_star_2
             charBgPainter = Res.drawable.character_charbg_2
@@ -501,13 +583,11 @@ fun CharacterCard(char: Char, onCharChange: (char: Char) -> Unit) {
                 if (tmplSkill == null) {
                     painterResource(Res.drawable.character_empty_skill)
                 } else {
-                    val skillIcon = File("data/skill/skill_icon_${tmplSkill.skillId}.png").absolutePath
-                    rememberImagePainter(ImageRequest(data = skillIcon.toPath()))
+                    SkillPainter(tmplSkill.skillId)
                 }
             }
         } else {
-            val skillIcon = File("data/skill/skill_icon_${skill.skillId}.png").absolutePath
-            rememberImagePainter(ImageRequest(data = skillIcon.toPath()))
+            SkillPainter(skill.skillId)
         }
         Image(
             painter = skillPainter,
@@ -707,6 +787,332 @@ fun generateImageLoader(): ImageLoader {
                 maxSizeBytes(512L * 1024 * 1024) // 512MB
             }
         }
+    }
+}
+
+@Composable
+fun GainCharDialog(onValueSave: (Item?) -> Unit) {
+    var charId by remember { mutableStateOf("") }
+    var count by remember { mutableStateOf(1) }
+    val textColors = TextFieldDefaults.outlinedTextFieldColors(
+        textColor = Color.Black,
+        focusedBorderColor = Color.Black,
+        unfocusedBorderColor = Color.DarkGray,
+        focusedLabelColor = Color.Black,
+        unfocusedLabelColor = Color.DarkGray,
+    )
+    DialogWindow(
+        onCloseRequest = { onValueSave(null) },
+        resizable = false,
+        title = "Type CharId and Count",
+        state = DialogState(
+            size = DpSize(360.dp, 200.dp),
+            position = WindowPosition(Alignment.Center)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp)
+                .background(color = Color.LightGray, shape = RoundedCornerShape(8.dp))
+        ) {
+            Row {
+                OutlinedTextField(
+                    value = charId,
+                    onValueChange = { charId = it },
+                    label = { Text(stringResource(Res.string.charId)) },
+                    isError = Table.CHARACTER_TABLE[charId] == null,
+                    singleLine = true,
+                    colors = textColors,
+                    modifier = Modifier.padding(8.dp).weight(8f),
+                )
+                OutlinedTextField(
+                    value = count.toString(),
+                    onValueChange = { count = it.toIntOrNull() ?: 1 },
+                    label = { Text(stringResource(Res.string.count)) },
+                    isError = count < 0,
+                    singleLine = true,
+                    colors = textColors,
+                    modifier = Modifier.padding(8.dp).weight(3f),
+                )
+            }
+            Row(
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                TextButton(
+                    onClick = { onValueSave(null) },
+                    modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colors.primary)
+                ) {
+                    Text(text = stringResource(Res.string.cancel), color = Color.Black)
+                }
+                val enabled = charId.startsWith("char_") && Table.CHARACTER_TABLE[charId] != null && count > 0
+                TextButton(
+                    onClick = { onValueSave(Item(charId, "CHAR", count)) },
+                    enabled = enabled,
+                    modifier = Modifier.clip(RoundedCornerShape(16.dp))
+                        .background(if (enabled) MaterialTheme.colors.primary else Color.Gray)
+                ) {
+                    Text(text = stringResource(Res.string.save), color = Color.Black)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ExtensionDialog(
+    extensionStatus: Int,
+    onClose: () -> Unit,
+    unlockAllStages: () -> Unit,
+    unlockAllFlags: () -> Unit,
+    unlockAllChar: (UnlockAllCharReq) -> Unit,
+    gainItem: (Item) -> Unit,
+) {
+    var showUnlockAllCharDialog by remember { mutableStateOf(false) }
+    var showGainItemDialog by remember { mutableStateOf(false) }
+    DialogWindow(
+        onCloseRequest = { onClose() },
+        resizable = false,
+        title = "Extension",
+        state = DialogState(
+            size = DpSize(400.dp, 520.dp),
+            position = WindowPosition(Alignment.Center)
+        )
+    ) {
+        Box {
+            Column(
+                verticalArrangement = Arrangement.SpaceAround,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.background(MaterialTheme.colors.background).padding(16.dp).fillMaxSize()
+            ) {
+                RequestButton("Unlock All Character") { showUnlockAllCharDialog = !showUnlockAllCharDialog }
+                RequestButton("Unlock All Stages") { unlockAllStages() }
+                RequestButton("Unlock All Flags") { unlockAllFlags() }
+                RequestButton("Gain Items") { showGainItemDialog = !showGainItemDialog }
+            }
+            Box(Modifier.align(Alignment.Center)) {
+                AnimatedVisibility(extensionStatus != 0) {
+                    Text(
+                        if (extensionStatus == 1) "Success" else if (extensionStatus == 2) "Fail" else "",
+                        color = Color.Black,
+                        fontSize = 20.sp,
+                        modifier = Modifier.padding(8.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF00CED1))
+                            .padding(8.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    if (showUnlockAllCharDialog) {
+        var evolvePhase by remember { mutableStateOf(2f) }
+        var level by remember { mutableStateOf(90f) }
+        var favorPoint by remember { mutableStateOf(200f) }
+        var mainSkillLvl by remember { mutableStateOf(7f) }
+        var equipLevel by remember { mutableStateOf(3f) }
+        var potentialRank by remember { mutableStateOf(5f) }
+        var specializeLevel by remember { mutableStateOf(3f) }
+        var enableRogueChar by remember { mutableStateOf(false) }
+        DialogWindow(
+            onCloseRequest = { showUnlockAllCharDialog = !showUnlockAllCharDialog },
+            resizable = false,
+            title = "Unlock All Char",
+            state = DialogState(
+                size = DpSize(520.dp, 600.dp),
+                position = WindowPosition(Alignment.Center)
+            )
+        ) {
+            Column {
+                Row(horizontalArrangement = Arrangement.SpaceBetween) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        IntRangeSlider(
+                            value = evolvePhase,
+                            maxValue = 2,
+                            description = stringResource(Res.string.elite_phase),
+                            onValueChange = { evolvePhase = it },
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        IntRangeSlider(
+                            value = level,
+                            maxValue = 90,
+                            start = 1,
+                            description = stringResource(Res.string.level),
+                            onValueChange = { level = it },
+                        )
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.SpaceBetween) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        IntRangeSlider(
+                            value = mainSkillLvl,
+                            maxValue = 7,
+                            start = 1,
+                            description = stringResource(Res.string.skill_level),
+                            onValueChange = {
+                                mainSkillLvl = it
+                                if (evolvePhase.roundToInt() == 0) mainSkillLvl = 4f
+                            },
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        IntRangeSlider(
+                            value = specializeLevel,
+                            maxValue = 3,
+                            description = stringResource(Res.string.specialize_level),
+                            onValueChange = {
+                                specializeLevel = it
+                                if (evolvePhase < 2f || mainSkillLvl < 7f) {
+                                    specializeLevel = 0f
+                                }
+                            },
+                        )
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.SpaceBetween) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        IntRangeSlider(
+                            value = equipLevel,
+                            maxValue = 3,
+                            description = stringResource(Res.string.equip_level),
+                            onValueChange = { equipLevel = it },
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        IntRangeSlider(
+                            value = potentialRank,
+                            maxValue = 5,
+                            description = stringResource(Res.string.potential),
+                            onValueChange = { potentialRank = it },
+                        )
+                    }
+                }
+                IntRangeSlider(
+                    value = favorPoint,
+                    maxValue = 200,
+                    description = stringResource(Res.string.fav_pt),
+                    onValueChange = { favorPoint = it },
+                )
+                EditSwitch("EnableRogueChar", enableRogueChar) { enableRogueChar = it }
+                Row(
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    TextButton(
+                        onClick = { showUnlockAllCharDialog = !showUnlockAllCharDialog },
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colors.primary)
+                    ) {
+                        Text(text = stringResource(Res.string.cancel), color = Color.Black)
+                    }
+                    TextButton(
+                        onClick = {
+                            unlockAllChar(
+                                UnlockAllCharReq(
+                                    favorPoint = Table.getRealFavPoint(favorPoint.roundToInt()),
+                                    potentialRank = potentialRank.roundToInt(),
+                                    specializeLevel = specializeLevel.roundToInt(),
+                                    mainSkillLvl = mainSkillLvl.roundToInt(),
+                                    evolvePhase = evolvePhase.roundToInt(),
+                                    level = level.roundToInt(),
+                                    equipLevel = equipLevel.roundToInt(),
+                                    enableRogueChar = enableRogueChar
+                                )
+                            )
+                            showUnlockAllCharDialog = !showUnlockAllCharDialog
+                        },
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colors.primary)
+                    ) {
+                        Text(text = stringResource(Res.string.save), color = Color.Black)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showGainItemDialog) {
+        val textColors = TextFieldDefaults.outlinedTextFieldColors(
+            textColor = Color.Black,
+            focusedBorderColor = Color.Black,
+            unfocusedBorderColor = Color.DarkGray,
+            focusedLabelColor = Color.Black,
+            unfocusedLabelColor = Color.DarkGray,
+        )
+        var itemId by remember { mutableStateOf("") }
+        var itemType by remember { mutableStateOf("") }
+        var count by remember { mutableStateOf(1f) }
+        DialogWindow(
+            onCloseRequest = { showGainItemDialog = !showGainItemDialog },
+            resizable = false,
+            title = "Type Item Data",
+            state = DialogState(
+                size = DpSize(360.dp, 400.dp),
+                position = WindowPosition(Alignment.Center)
+            )
+        ) {
+            Column(
+                verticalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+                    .background(color = Color.LightGray, shape = RoundedCornerShape(8.dp))
+            ) {
+                OutlinedTextField(
+                    value = itemId,
+                    onValueChange = { itemId = it },
+                    label = { Text(stringResource(Res.string.itemId)) },
+                    singleLine = true,
+                    colors = textColors,
+                    modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = itemType.toString(),
+                    onValueChange = { itemType = it },
+                    label = { Text(stringResource(Res.string.item_type)) },
+                    singleLine = true,
+                    colors = textColors,
+                    modifier = Modifier.padding(8.dp).fillMaxWidth()
+                )
+                IntRangeSlider(
+                    value = count,
+                    maxValue = 99,
+                    start = 1,
+                    description = stringResource(Res.string.count),
+                    onValueChange = { count = it }
+                )
+                Row(
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    TextButton(
+                        onClick = { showGainItemDialog = !showGainItemDialog },
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colors.primary)
+                    ) {
+                        Text(text = stringResource(Res.string.cancel), color = Color.Black)
+                    }
+                    TextButton(
+                        onClick = {
+                            gainItem(Item(itemId, itemType, count.roundToInt()))
+                            showGainItemDialog = !showGainItemDialog
+                        },
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colors.primary)
+                    ) {
+                        Text(text = stringResource(Res.string.save), color = Color.Black)
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+@Composable
+fun RequestButton(text: String, onclick: () -> Unit) {
+    Button(onClick = onclick, modifier = Modifier.fillMaxWidth().height(60.dp)) {
+        Text(text = text, color = Color.White, modifier = Modifier.background(MaterialTheme.colors.primary))
     }
 }
 

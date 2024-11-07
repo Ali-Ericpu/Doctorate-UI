@@ -1,10 +1,15 @@
 package com.doctorate.ui.network.datasource
 
 import com.doctorate.ui.config.readConfig
+import com.doctorate.ui.entity.Char
 import com.doctorate.ui.entity.Result
-import com.doctorate.ui.entity.SaveCharBody
 import com.doctorate.ui.network.client.NetworkModule
 import com.doctorate.ui.network.retrofit.CharacterApiService
+import com.doctorate.ui.req.GainItemReq
+import com.doctorate.ui.req.SaveCharReq
+import com.doctorate.ui.req.UnlockAllCharReq
+import com.doctorate.ui.util.JsonUtil
+import com.doctorate.ui.util.log
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +36,7 @@ object CharacterDataSource {
     }
 
     private fun initService() = Retrofit.Builder()
-        .baseUrl(getServerUri().also { println(it) })
+        .baseUrl(getServerUri().also { log().info("Server URI: {}", it) })
         .client(NetworkModule.providesOkHttpClient())
         .addConverterFactory(NetworkModule.providesNetworkJson().asConverterFactory("application/json".toMediaType()))
         .build()
@@ -42,12 +47,34 @@ object CharacterDataSource {
         service = initService()
     }
 
-    suspend fun syncCharacter(adminKey: String, uid: String): Result {
+    suspend fun syncCharacter(adminKey: String, uid: String): Result<Map<String, Char>> {
+        log().info("syncCharacter UID: {}", uid)
         return service.syncCharacter(adminKey, uid)
     }
 
-    suspend fun saveCharacter(adminKey: String, saveCharBody: SaveCharBody): Result {
-        return service.saveCharacter(adminKey, saveCharBody)
+    suspend fun saveCharacter(adminKey: String, uid: String, saveCharBody: SaveCharReq): Result<String?> {
+        log().info("saveCharacter UID: {} -> {}", uid, saveCharBody)
+        return service.saveCharacter(adminKey, uid, saveCharBody)
+    }
+
+    suspend fun gainItem(adminKey: String, uid: String, gainItemReq: GainItemReq): Result<String?> {
+        log().info("gainItem UID: {} -> {}",uid, JsonUtil.toJson(gainItemReq))
+        return service.gainItem(adminKey, uid, gainItemReq)
+    }
+
+    suspend fun unlockAllStages(adminKey: String, uid: String): Result<String?> {
+        log().info("unlockAllStages UID: {}", uid)
+        return service.unlockAllStage(adminKey, uid)
+    }
+
+    suspend fun unlockAllFlags(adminKey: String, uid: String): Result<String?> {
+        log().info("unlockAllFlags UID: {}", uid)
+        return service.unlockAllStage(adminKey, uid)
+    }
+
+    suspend fun unlockAllChar(adminKey: String, uid: String, unlockAllCharReq: UnlockAllCharReq): Result<String?> {
+        log().info("unlockAllChar UID: {} -> {}", uid, JsonUtil.toJson(unlockAllCharReq))
+        return service.unlockAllChar(adminKey, uid, unlockAllCharReq)
     }
 
 }

@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -282,15 +283,8 @@ fun SkillDetail(
             val skillPainter = if (skill.unlock == 0) {
                 painterResource(Res.drawable.character_locked_skill)
             } else {
-                val skillId = URLEncoder.encode(skill.skillId, StandardCharsets.UTF_8)
-                val link = "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/refs/heads/main/skill/skill_icon_$skillId.png"
-                rememberImagePainter(ImageRequest(data = link))
+                SkillPainter(skill.skillId)
             }
-            Image(
-                painter = painterResource(Res.drawable.character_default_skill_icon),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize()
-            )
             Image(
                 painter = skillPainter, contentDescription = null, modifier = Modifier.fillMaxSize().border(
                     width = 4.dp,
@@ -345,4 +339,15 @@ fun SkillDetail(
             }
         }
     }
+}
+
+@Composable
+fun SkillPainter(skillId: String): Painter {
+    val skillId = URLEncoder.encode(skillId, StandardCharsets.UTF_8)
+    val imageUrl = "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/refs/heads/main/skill/skill_icon_$skillId.png"
+    return rememberImagePainter(
+        request = ImageRequest(data = imageUrl),
+        placeholderPainter = { painterResource(Res.drawable.character_default_skill_icon) },
+        errorPainter = { painterResource(Res.drawable.character_default_skill_icon) }
+    )
 }

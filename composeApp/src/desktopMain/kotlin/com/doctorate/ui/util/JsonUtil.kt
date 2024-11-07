@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import ognl.Ognl
 import java.io.File
 
 /**
@@ -41,11 +40,6 @@ object JsonUtil {
         return mapper.readValue<Map<String, Any>>(json)
     }
 
-    /**
-     * @return Any 需要手动强转类型
-     */
-    fun getValue(map: Map<*, *>, path: String): Any? = Ognl.getValue(path, map)
-
     inline fun <reified T> fromJson(file: File): T = mapper.readValue<T>(file)
 
     inline fun <reified T> fromJson(json: String): T = mapper.readValue<T>(json)
@@ -60,6 +54,7 @@ object JsonUtil {
 
     fun writeToFile(json: String, file: File) {
         factory.newThread { file.parentFile.mkdirs().also { file.writeText(json) } }.start()
+        log().info("Write Json to file: {}", file.absolutePath)
     }
 
 }

@@ -2,6 +2,7 @@ package com.doctorate.ui.config
 
 import androidx.compose.runtime.*
 import com.doctorate.ui.util.JsonUtil
+import com.doctorate.ui.util.log
 import com.doctorate.ui.view.LocalAppToaster
 import kotlinx.coroutines.launch
 import java.io.File
@@ -74,7 +75,7 @@ fun writeConfig(newConfig: AppConfig, onSuccess: () -> Unit, onFailure: (String)
 
 object GlobalConfig {
     var config: AppConfig? = null
-        get() = field.also { println("Load Config") }
+        get() = field.also { log().info("Load Config") }
 
     init {
         config = readConfig()

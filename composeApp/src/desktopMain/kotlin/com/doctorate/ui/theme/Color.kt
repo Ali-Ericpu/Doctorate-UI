@@ -3,7 +3,7 @@ package com.doctorate.ui.theme
 import androidx.compose.material.Colors
 import androidx.compose.ui.graphics.Color
 
-private val primaryLight = Color(0xFF006685)
+private val primaryLight = Color(0xFF3399FF)
 private val onPrimaryLight = Color(0xFFFFFFFF)
 private val primaryContainerLight = Color(0xFF87CEEB)
 private val onPrimaryContainerLight = Color(0xFF003143)
@@ -20,26 +20,26 @@ private val onErrorLight = Color(0xFFFFFFFF)
 private val errorContainerLight = Color(0xFFFFDAD6)
 private val onErrorContainerLight = Color(0xFF410002)
 private val backgroundLight = Color(0xFFF5FAFF)
-private val onBackgroundLight = Color(0xFF161C20)
+private val onBackgroundLight = Color(0xFFC0C0C0)
 private val surfaceLight = Color(0xFFFCF9F8)
 private val onSurfaceLight = Color(0xFF1B1B1C)
 
-private val primaryDark = Color(0xFF92DBFF)
+private val primaryDark = Color(0xFFFF6666)
 private val onPrimaryDark = Color(0xFF003547)
 private val primaryContainerDark = Color(0xFF00B6EB)
 private val secondaryDark = Color(0xFF93D5AA)
 private val onSecondaryDark = Color(0xFF00391F)
 private val secondaryContainerDark = Color(0xFF609F78)
-private val errorDark = Color(0xFFFFB4AB)
-private val onErrorDark = Color(0xFF690005)
+private val errorDark = Color(0xFFBA1A1A)
+private val onErrorDark = Color(0xFFFFFFFF)
 private val backgroundDark = Color(0xFF0E1417)
 private val onBackgroundDark = Color(0xFFDEE3E8)
 private val surfaceDark = Color(0xFF131314)
 private val onSurfaceDark = Color(0xFFE4E2E2)
 
 val lightTheme = Colors(
-    primary = primaryDark,
-    primaryVariant = primaryLight,
+    primary = primaryLight,
+    primaryVariant = onPrimaryLight,
     secondary = secondaryContainerLight,
     secondaryVariant = secondaryLight,
     background = backgroundLight,

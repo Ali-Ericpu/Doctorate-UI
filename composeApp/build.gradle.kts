@@ -27,21 +27,22 @@ kotlin {
             implementation("com.squareup.retrofit2:retrofit:2.11.0")
             implementation("com.squareup.okhttp3:okhttp:4.12.0")
             implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-            implementation("io.github.qdsfdhvh:image-loader:1.8.4")
+            implementation("io.github.qdsfdhvh:image-loader:1.9.0")
             // optional - Compose Multiplatform Resources Decoder
-            implementation("io.github.qdsfdhvh:image-loader-extension-compose-resources:1.8.4")
+            implementation("io.github.qdsfdhvh:image-loader-extension-compose-resources:1.9.0")
             // optional - Moko Resources Decoder
-            implementation("io.github.qdsfdhvh:image-loader-extension-moko-resources:1.8.4")
+            implementation("io.github.qdsfdhvh:image-loader-extension-moko-resources:1.9.0")
             implementation("com.squareup.okio:okio:3.9.0")
             implementation("ognl:ognl:3.4.3")
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:+")
             implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:+")
             implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.+")
+            implementation("ch.qos.logback:logback-classic:+")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
-            implementation("io.github.qdsfdhvh:image-loader-extension-imageio:1.8.4")
+            implementation("io.github.qdsfdhvh:image-loader-extension-imageio:1.9.0")
         }
     }
 }

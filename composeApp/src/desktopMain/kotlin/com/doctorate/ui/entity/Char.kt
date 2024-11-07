@@ -25,7 +25,7 @@ data class Char(
     val instId: Int,
     val charId: String,
     var name: String? = null,
-    var rarity: Int? = null,
+    var rank: Int? = null,
     var profession: String? = null,
     var favorPoint: Int,
     var potentialRank: Int,
@@ -48,7 +48,7 @@ data class Char(
         when {
             this.starMark != other.starMark -> other.starMark.compareTo(starMark)
             this.evolvePhase != other.evolvePhase -> other.evolvePhase.compareTo(evolvePhase)
-            this.rarity != other.rarity -> other.rarity!!.compareTo(rarity!!)
+            this.rank != other.rank -> other.rank!!.compareTo(rank!!)
             this.profession != other.profession -> other.profession!!.compareTo(profession!!)
             this.level != other.level -> other.level.compareTo(level)
             else -> 0
@@ -90,18 +90,3 @@ enum class Profession(val icon: DrawableResource) {
     SUPPORT(Res.drawable.character_profession_support),
     SPECIAL(Res.drawable.character_profession_special),
 }
-
-@Serializable
-data class Result(
-    val data: Map<String, Char>? = null,
-    val msg: String,
-    val status: Int,
-    val type: String,
-)
-
-@Serializable
-data class SaveCharBody(
-    val uid: String,
-    val charInstId: Int,
-    val char: Char
-)

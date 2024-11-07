@@ -35,7 +35,7 @@ class EmulatorViewModel : ViewModel() {
         val adbToolPath = config.adbToolPath
         CommandUtil.cmdTask(adbToolPath, "connect", config.adbUri)?.also {
             if (it.startsWith("cannot")) {
-                throw RuntimeException("Connecting failed, Please check Emulator!")
+                throw RuntimeException("Connect failed, Please check Emulator!")
             }
             commandUpdate(it)
         }
