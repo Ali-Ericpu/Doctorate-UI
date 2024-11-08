@@ -69,7 +69,7 @@ object CharacterDataSource {
 
     suspend fun unlockAllFlags(adminKey: String, uid: String): Result<String?> {
         log().info("unlockAllFlags UID: {}", uid)
-        return service.unlockAllStage(adminKey, uid)
+        return service.unlockAllFlag(adminKey, uid)
     }
 
     suspend fun unlockAllChar(adminKey: String, uid: String, unlockAllCharReq: UnlockAllCharReq): Result<String?> {

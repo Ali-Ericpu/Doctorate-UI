@@ -9,7 +9,6 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
-import retrofit2.http.Query
 
 /**
  * ClassName: CharacterService
@@ -24,7 +23,7 @@ interface CharacterApiService {
     @GET("admin/character/sync")
     suspend fun syncCharacter(
         @Header("adminKey") adminKey: String,
-        @Query("uid") uid: String
+        @Header("uid") uid: String
     ): Result<Map<String, Char>>
 
     @POST("admin/character/save")
